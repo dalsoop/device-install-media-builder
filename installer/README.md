@@ -1,8 +1,16 @@
 # Installer source
 
-This directory will contain the boot menus, preseed, disk-selection gate,
-first-boot units, offline packages manifest, and encrypted USB enrollment writer.
+This directory contains the first implementation of the Debian OS installer:
 
-No destructive installer is committed in the bootstrap revision. Implementation
-starts only after all three physical machines have exact inventory values and the
-safe-default internal-disk boot path is covered by a VM test.
+- `build-image` builds an offline amd64 image on a Debian 13 builder.
+- `capture-inventory` hashes the exact identity of one HP PC, NIC, and disk.
+- `simple-cdd/` holds the unattended Debian Installer profile.
+- `scripts/install-gate` refuses partitioning unless one inventory entry and one
+  internal disk match exactly.
+- `payload/` holds host files installed before first boot.
+
+The generated image installs Debian, OpenSSH, Cockpit, nftables, and operational
+utilities without Internet access. It does not yet install Technitium or write
+credentials to `DNS-ENROLL`; those are separate first-boot phases.
+
+See [`docs/os-install.md`](../docs/os-install.md) before building or booting it.

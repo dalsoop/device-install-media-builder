@@ -1,0 +1,76 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
+builder_dir="$script_dir/simple-cdd"
+generated_dir="$builder_dir/generated"
+inventory_dir=${DNS_APPLIANCE_INVENTORY_DIR:-$repo_root/inventory/local}
+authorized_keys=${DNS_APPLIANCE_AUTHORIZED_KEYS:-$script_dir/inputs/operator-authorized-keys}
+
+fail() {
+    echo "build-image: $*" >&2
+    exit 1
+}
+
+[ "$(uname -s)" = Linux ] || fail "build on an amd64 Debian 13 host"
+[ "$(uname -m)" = x86_64 ] || fail "amd64 builder required"
+[ -r /etc/os-release ] || fail "cannot identify builder OS"
+. /etc/os-release
+[ "${ID:-}" = debian ] || fail "Debian builder required"
+[ "${VERSION_CODENAME:-}" = trixie ] || fail "Debian 13 trixie builder required"
+command -v build-simple-cdd >/dev/null 2>&1 || fail "install the simple-cdd package"
+command -v sha256sum >/dev/null 2>&1 || fail "sha256sum is required"
+
+[ -r "$authorized_keys" ] || fail "missing operator public key: $authorized_keys"
+awk '
+    /^[[:space:]]*(#|$)/ { next }
+    $1 ~ /^(ssh-ed25519|ssh-rsa|ecdsa-sha2-)/ { found=1; next }
+    { bad=1 }
+    END { exit !(found && !bad) }
+' "$authorized_keys" || fail "authorized-keys input must contain only SSH public keys"
+
+mkdir -p "$generated_dir"
+for old in dns01.conf dns02.conf dns03.conf operator-authorized-keys; do
+    rm -f "$generated_dir/$old"
+done
+
+required_hashes='expected_product_name_sha256 expected_product_sku_sha256 expected_system_serial_sha256 expected_system_uuid_sha256 expected_mac_sha256 expected_disk_model_sha256 expected_disk_serial_sha256'
+enabled_count=0
+
+for role in dns01 dns02 dns03; do
+    source_file="$inventory_dir/$role.conf"
+    [ -r "$source_file" ] || fail "missing inventory: $source_file"
+    grep -q "^role=$role$" "$source_file" || fail "$role has the wrong role field"
+    enabled=$(awk -F= '$1 == "destructive_install_enabled" { print $2 }' "$source_file")
+    case "$enabled" in
+        true)
+            enabled_count=$((enabled_count + 1))
+            grep -q 'REPLACE_' "$source_file" && fail "$role contains placeholders"
+            for key in $required_hashes; do
+                value=$(awk -F= -v wanted="$key" '$1 == wanted { print $2 }' "$source_file")
+                printf '%s' "$value" | grep -Eq '^[0-9a-f]{64}$' ||
+                    fail "$role has an invalid $key"
+            done
+            min_bytes=$(awk -F= '$1 == "expected_disk_min_bytes" { print $2 }' "$source_file")
+            case "$min_bytes" in
+                ''|*[!0-9]*) fail "$role has an invalid expected_disk_min_bytes" ;;
+            esac
+            [ "$min_bytes" -gt 0 ] || fail "$role disk size must be greater than zero"
+            ;;
+        false) ;;
+        *) fail "$role has an invalid destructive_install_enabled value" ;;
+    esac
+    install -m 0644 "$source_file" "$generated_dir/$role.conf"
+done
+
+[ "$enabled_count" -gt 0 ] || fail "all roles remain erase-disabled"
+
+install -m 0644 "$authorized_keys" "$generated_dir/operator-authorized-keys"
+
+cd "$builder_dir"
+build-simple-cdd --conf simple-cdd.conf --profiles dns
+
+set -- images/*.iso
+[ -e "$1" ] || fail "Simple-CDD completed without an ISO"
+sha256sum "$@"

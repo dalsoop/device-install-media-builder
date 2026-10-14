@@ -1,0 +1,7 @@
+generated/dns01.conf
+generated/dns02.conf
+generated/dns03.conf
+generated/operator-authorized-keys
+../scripts/install-gate
+../payload/nftables.conf
+../payload/sshd-hardening.conf

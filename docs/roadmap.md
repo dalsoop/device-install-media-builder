@@ -10,7 +10,8 @@
 ## Phase 1: fail-closed installer
 
 - Implement BIOS and UEFI boot menus with internal disk as the safe default.
-- Require a role selection and exact hardware, serial/UUID, MAC, and disk match.
+- Build the committed Simple-CDD OS profile and validate its offline package set.
+- Identify the role from exact hardware, serial/UUID, MAC, and disk matches.
 - Refuse duplicate completed roles unless an explicit reinstall path is used.
 - Keep all destructive gates disabled until inventory is complete.
 
