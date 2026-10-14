@@ -27,6 +27,11 @@ The installer remains blocked until each HP PC is captured into the ignored
 explicitly changed to `true`. Technitium installation, writable USB enrollment,
 and the reproducible package closure remain later phases.
 
+The isolated install-gate simulation currently passes 9/9 cases on the `m5m1`
+build host. This proves the scripted target-selection decisions only; it is not
+evidence of a booted ISO or completed Debian installation. See the
+[recorded evidence](evidence/2026-10-15-install-gate-simulation.md).
+
 ## Design summary
 
 1. The read-only installer image contains pinned packages and a pinned
