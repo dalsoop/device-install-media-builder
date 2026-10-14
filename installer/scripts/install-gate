@@ -1,8 +1,11 @@
 #!/bin/sh
 set -eu
 
-media_dir=/cdrom/simple-cdd
-state_dir=/run/dns-appliance
+media_dir=${DNS_INSTALLER_MEDIA_DIR:-/cdrom/simple-cdd}
+state_dir=${DNS_INSTALLER_STATE_DIR:-/run/dns-appliance}
+sys_root=${DNS_INSTALLER_SYS_ROOT:-/sys}
+mounts_file=${DNS_INSTALLER_MOUNTS_FILE:-/proc/mounts}
+debconf_set_command=${DNS_INSTALLER_DEBCONF_SET:-debconf-set}
 state_file=$state_dir/install.env
 
 fail() {
@@ -27,6 +30,10 @@ read_first_line() {
     file=$1
     [ -r "$file" ] || fail "cannot read $file"
     sed -n '1p' "$file"
+}
+
+set_debconf() {
+    "$debconf_set_command" "$@"
 }
 
 load_config() {
@@ -71,10 +78,10 @@ load_config() {
 }
 
 match_node() {
-    product_name_hash=$(hash_value "$(read_first_line /sys/class/dmi/id/product_name)")
-    product_sku_hash=$(hash_value "$(read_first_line /sys/class/dmi/id/product_sku)")
-    system_serial_hash=$(hash_value "$(read_first_line /sys/class/dmi/id/product_serial)")
-    system_uuid_hash=$(hash_value "$(read_first_line /sys/class/dmi/id/product_uuid)")
+    product_name_hash=$(hash_value "$(read_first_line "$sys_root/class/dmi/id/product_name")")
+    product_sku_hash=$(hash_value "$(read_first_line "$sys_root/class/dmi/id/product_sku")")
+    system_serial_hash=$(hash_value "$(read_first_line "$sys_root/class/dmi/id/product_serial")")
+    system_uuid_hash=$(hash_value "$(read_first_line "$sys_root/class/dmi/id/product_uuid")")
 
     matches=0
     matched_config=
@@ -91,7 +98,7 @@ match_node() {
 
         nic_match=
         nic_count=0
-        for nic_path in /sys/class/net/*; do
+        for nic_path in "$sys_root"/class/net/*; do
             nic=${nic_path##*/}
             [ "$nic" = lo ] && continue
             [ -r "$nic_path/address" ] || continue
@@ -124,25 +131,25 @@ match_node() {
         printf 'NIC_NAME=%s\n' "$NIC_NAME"
     } > "$state_file"
 
-    debconf-set netcfg/choose_interface "$NIC_NAME"
-    debconf-set netcfg/get_hostname "$ROLE"
-    debconf-set netcfg/get_domain "$DOMAIN"
-    debconf-set netcfg/get_ipaddress "$ADDRESS"
-    debconf-set netcfg/get_netmask "$NETMASK"
-    debconf-set netcfg/get_gateway "$GATEWAY"
-    debconf-set netcfg/get_nameservers "$DNS_SERVERS"
-    debconf-set netcfg/confirm_static true
+    set_debconf netcfg/choose_interface "$NIC_NAME"
+    set_debconf netcfg/get_hostname "$ROLE"
+    set_debconf netcfg/get_domain "$DOMAIN"
+    set_debconf netcfg/get_ipaddress "$ADDRESS"
+    set_debconf netcfg/get_netmask "$NETMASK"
+    set_debconf netcfg/get_gateway "$GATEWAY"
+    set_debconf netcfg/get_nameservers "$DNS_SERVERS"
+    set_debconf netcfg/confirm_static true
 }
 
 boot_parent_disk() {
-    source=$(awk '$2 == "/cdrom" { print $1; exit }' /proc/mounts)
+    source=$(awk '$2 == "/cdrom" { print $1; exit }' "$mounts_file")
     case "$source" in
         /dev/*) ;;
         *) return 0 ;;
     esac
     name=${source#/dev/}
-    while [ -e "/sys/class/block/$name/partition" ]; do
-        name=$(basename "$(readlink -f "/sys/class/block/$name/..")")
+    while [ -e "$sys_root/class/block/$name/partition" ]; do
+        name=$(basename "$(readlink -f "$sys_root/class/block/$name/..")")
     done
     printf '%s\n' "$name"
 }
@@ -152,7 +159,7 @@ match_disk() {
     matched_disk=
     media_disk=$(boot_parent_disk)
 
-    for disk_path in /sys/class/block/*; do
+    for disk_path in "$sys_root"/class/block/*; do
         disk=${disk_path##*/}
         case "$disk" in
             loop*|ram*|fd*|sr*|dm-*|md*) continue ;;
@@ -181,7 +188,7 @@ match_disk() {
 
     [ "$disk_matches" -eq 1 ] || fail "disk matched $disk_matches targets; expected exactly one"
     printf 'TARGET_DISK=%s\n' "$matched_disk" >> "$state_file"
-    debconf-set partman-auto/disk "$matched_disk"
+    set_debconf partman-auto/disk "$matched_disk"
 }
 
 case "${1:-}" in
