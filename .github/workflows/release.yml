@@ -10,7 +10,7 @@ jobs:
   build:
     runs-on: [self-hosted, linux, x64, dns-image-builder]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Use runner-local public inputs
         run: |
           install -m 0644 /etc/dns-appliance-builder/operator-authorized-keys installer/inputs/operator-authorized-keys
