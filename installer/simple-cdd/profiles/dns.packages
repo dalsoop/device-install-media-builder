@@ -1,0 +1,15 @@
+age
+ca-certificates
+cockpit
+cockpit-system
+curl
+dnsutils
+exfatprogs
+jq
+nftables
+openssh-server
+prometheus-node-exporter
+rsync
+smartmontools
+sudo
+systemd-timesyncd

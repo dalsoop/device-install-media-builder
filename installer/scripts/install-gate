@@ -1,0 +1,198 @@
+#!/bin/sh
+set -eu
+
+media_dir=/cdrom/simple-cdd
+state_dir=/run/dns-appliance
+state_file=$state_dir/install.env
+
+fail() {
+    message="DNS appliance install blocked: $*"
+    logger -t dns-appliance-installer "$message" 2>/dev/null || true
+    echo "$message" >&2
+    exit 1
+}
+
+normalize() {
+    LC_ALL=C tr '[:lower:]' '[:upper:]' |
+        sed 's/^[[:space:]]*//; s/[[:space:]]*$//'
+}
+
+hash_value() {
+    value=$1
+    [ -n "$value" ] || fail "empty hardware identity"
+    printf '%s' "$value" | normalize | sha256sum | awk '{print $1}'
+}
+
+read_first_line() {
+    file=$1
+    [ -r "$file" ] || fail "cannot read $file"
+    sed -n '1p' "$file"
+}
+
+load_config() {
+    config=$1
+    ROLE=
+    ADDRESS=
+    PREFIX_LENGTH=
+    NETMASK=
+    GATEWAY=
+    DNS_SERVERS=
+    DOMAIN=
+    EXPECTED_PRODUCT_NAME_SHA256=
+    EXPECTED_PRODUCT_SKU_SHA256=
+    EXPECTED_SYSTEM_SERIAL_SHA256=
+    EXPECTED_SYSTEM_UUID_SHA256=
+    EXPECTED_MAC_SHA256=
+    EXPECTED_DISK_MODEL_SHA256=
+    EXPECTED_DISK_SERIAL_SHA256=
+    EXPECTED_DISK_MIN_BYTES=
+    DESTRUCTIVE_INSTALL_ENABLED=
+
+    while IFS='=' read -r key value; do
+        case "$key" in
+            role) ROLE=$value ;;
+            address) ADDRESS=$value ;;
+            prefix_length) PREFIX_LENGTH=$value ;;
+            netmask) NETMASK=$value ;;
+            gateway) GATEWAY=$value ;;
+            dns_servers) DNS_SERVERS=$value ;;
+            domain) DOMAIN=$value ;;
+            expected_product_name_sha256) EXPECTED_PRODUCT_NAME_SHA256=$value ;;
+            expected_product_sku_sha256) EXPECTED_PRODUCT_SKU_SHA256=$value ;;
+            expected_system_serial_sha256) EXPECTED_SYSTEM_SERIAL_SHA256=$value ;;
+            expected_system_uuid_sha256) EXPECTED_SYSTEM_UUID_SHA256=$value ;;
+            expected_mac_sha256) EXPECTED_MAC_SHA256=$value ;;
+            expected_disk_model_sha256) EXPECTED_DISK_MODEL_SHA256=$value ;;
+            expected_disk_serial_sha256) EXPECTED_DISK_SERIAL_SHA256=$value ;;
+            expected_disk_min_bytes) EXPECTED_DISK_MIN_BYTES=$value ;;
+            destructive_install_enabled) DESTRUCTIVE_INSTALL_ENABLED=$value ;;
+        esac
+    done < "$config"
+}
+
+match_node() {
+    product_name_hash=$(hash_value "$(read_first_line /sys/class/dmi/id/product_name)")
+    product_sku_hash=$(hash_value "$(read_first_line /sys/class/dmi/id/product_sku)")
+    system_serial_hash=$(hash_value "$(read_first_line /sys/class/dmi/id/product_serial)")
+    system_uuid_hash=$(hash_value "$(read_first_line /sys/class/dmi/id/product_uuid)")
+
+    matches=0
+    matched_config=
+    matched_nic=
+
+    for config in "$media_dir"/dns01.conf "$media_dir"/dns02.conf "$media_dir"/dns03.conf; do
+        [ -r "$config" ] || fail "missing embedded inventory $(basename "$config")"
+        load_config "$config"
+        [ "$DESTRUCTIVE_INSTALL_ENABLED" = true ] || continue
+        [ "$product_name_hash" = "$EXPECTED_PRODUCT_NAME_SHA256" ] || continue
+        [ "$product_sku_hash" = "$EXPECTED_PRODUCT_SKU_SHA256" ] || continue
+        [ "$system_serial_hash" = "$EXPECTED_SYSTEM_SERIAL_SHA256" ] || continue
+        [ "$system_uuid_hash" = "$EXPECTED_SYSTEM_UUID_SHA256" ] || continue
+
+        nic_match=
+        nic_count=0
+        for nic_path in /sys/class/net/*; do
+            nic=${nic_path##*/}
+            [ "$nic" = lo ] && continue
+            [ -r "$nic_path/address" ] || continue
+            mac_hash=$(hash_value "$(read_first_line "$nic_path/address")")
+            if [ "$mac_hash" = "$EXPECTED_MAC_SHA256" ]; then
+                nic_match=$nic
+                nic_count=$((nic_count + 1))
+            fi
+        done
+        [ "$nic_count" -eq 1 ] || continue
+
+        matches=$((matches + 1))
+        matched_config=$config
+        matched_nic=$nic_match
+    done
+
+    [ "$matches" -eq 1 ] || fail "hardware matched $matches inventory entries; expected exactly one"
+    load_config "$matched_config"
+    NIC_NAME=$matched_nic
+
+    mkdir -p "$state_dir"
+    {
+        printf 'ROLE=%s\n' "$ROLE"
+        printf 'ADDRESS=%s\n' "$ADDRESS"
+        printf 'PREFIX_LENGTH=%s\n' "$PREFIX_LENGTH"
+        printf 'NETMASK=%s\n' "$NETMASK"
+        printf 'GATEWAY=%s\n' "$GATEWAY"
+        printf 'DNS_SERVERS=%s\n' "$DNS_SERVERS"
+        printf 'DOMAIN=%s\n' "$DOMAIN"
+        printf 'NIC_NAME=%s\n' "$NIC_NAME"
+    } > "$state_file"
+
+    debconf-set netcfg/choose_interface "$NIC_NAME"
+    debconf-set netcfg/get_hostname "$ROLE"
+    debconf-set netcfg/get_domain "$DOMAIN"
+    debconf-set netcfg/get_ipaddress "$ADDRESS"
+    debconf-set netcfg/get_netmask "$NETMASK"
+    debconf-set netcfg/get_gateway "$GATEWAY"
+    debconf-set netcfg/get_nameservers "$DNS_SERVERS"
+    debconf-set netcfg/confirm_static true
+}
+
+boot_parent_disk() {
+    source=$(awk '$2 == "/cdrom" { print $1; exit }' /proc/mounts)
+    case "$source" in
+        /dev/*) ;;
+        *) return 0 ;;
+    esac
+    name=${source#/dev/}
+    while [ -e "/sys/class/block/$name/partition" ]; do
+        name=$(basename "$(readlink -f "/sys/class/block/$name/..")")
+    done
+    printf '%s\n' "$name"
+}
+
+match_disk() {
+    disk_matches=0
+    matched_disk=
+    media_disk=$(boot_parent_disk)
+
+    for disk_path in /sys/class/block/*; do
+        disk=${disk_path##*/}
+        case "$disk" in
+            loop*|ram*|fd*|sr*|dm-*|md*) continue ;;
+        esac
+        [ ! -e "$disk_path/partition" ] || continue
+        [ "$(read_first_line "$disk_path/removable")" = 0 ] || continue
+        [ "$disk" != "$media_disk" ] || continue
+        [ -r "$disk_path/device/model" ] || continue
+        [ -r "$disk_path/device/serial" ] || continue
+
+        model_hash=$(hash_value "$(read_first_line "$disk_path/device/model")")
+        serial_hash=$(hash_value "$(read_first_line "$disk_path/device/serial")")
+        sectors=$(read_first_line "$disk_path/size")
+        case "$sectors" in
+            ''|*[!0-9]*) continue ;;
+        esac
+        bytes=$((sectors * 512))
+
+        [ "$model_hash" = "$EXPECTED_DISK_MODEL_SHA256" ] || continue
+        [ "$serial_hash" = "$EXPECTED_DISK_SERIAL_SHA256" ] || continue
+        [ "$bytes" -ge "$EXPECTED_DISK_MIN_BYTES" ] || continue
+
+        disk_matches=$((disk_matches + 1))
+        matched_disk=/dev/$disk
+    done
+
+    [ "$disk_matches" -eq 1 ] || fail "disk matched $disk_matches targets; expected exactly one"
+    printf 'TARGET_DISK=%s\n' "$matched_disk" >> "$state_file"
+    debconf-set partman-auto/disk "$matched_disk"
+}
+
+case "${1:-}" in
+    identify)
+        match_node
+        ;;
+    select-disk)
+        match_node
+        match_disk
+        ;;
+    *)
+        fail "unknown gate phase"
+        ;;
+esac

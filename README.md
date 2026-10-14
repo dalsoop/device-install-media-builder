@@ -17,13 +17,15 @@ installation must remain functional without Internet access.
 
 ## Current status
 
-This repository is a safety-first bootstrap. It defines the architecture,
-security boundaries, hardware inventory contract, enrollment record schema, and
-implementation roadmap. It does **not** yet publish a bootable installer.
+The repository now contains the Debian 13 OS installer source: a Simple-CDD
+profile, an unattended preseed, an exact-hardware install gate, SSH-key-only
+operator bootstrap, Cockpit, and a locked-down host firewall. It intentionally
+does **not** contain a generated ISO or real machine inventory.
 
-The existing local prototype is intentionally not imported as a release because
-it still needs a writable enrollment partition, retry-safe credential handling,
-exact hardware allowlists, health-gated completion, and a reproducible build.
+The installer remains blocked until each HP PC is captured into the ignored
+`inventory/local/` directory and its `destructive_install_enabled` flag is
+explicitly changed to `true`. Technitium installation, writable USB enrollment,
+and the reproducible package closure remain later phases.
 
 ## Design summary
 
@@ -38,4 +40,4 @@ exact hardware allowlists, health-gated completion, and a reproducible build.
    and a management-plane MCP gateway.
 
 Start with [the architecture](docs/architecture.md), [security rules](docs/security.md),
-and [the implementation roadmap](docs/roadmap.md).
+[the OS installer guide](docs/os-install.md), and [the implementation roadmap](docs/roadmap.md).

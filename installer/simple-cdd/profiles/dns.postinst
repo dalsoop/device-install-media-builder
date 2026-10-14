@@ -1,0 +1,72 @@
+#!/bin/sh
+set -eu
+
+state=/run/dns-appliance/install.env
+[ -r "$state" ] || {
+    echo "dns.postinst: installer state is missing" >&2
+    exit 1
+}
+
+ROLE=
+ADDRESS=
+NETMASK=
+GATEWAY=
+DNS_SERVERS=
+DOMAIN=
+NIC_NAME=
+TARGET_DISK=
+
+while IFS='=' read -r key value; do
+    case "$key" in
+        ROLE) ROLE=$value ;;
+        ADDRESS) ADDRESS=$value ;;
+        NETMASK) NETMASK=$value ;;
+        GATEWAY) GATEWAY=$value ;;
+        DNS_SERVERS) DNS_SERVERS=$value ;;
+        DOMAIN) DOMAIN=$value ;;
+        NIC_NAME) NIC_NAME=$value ;;
+        TARGET_DISK) TARGET_DISK=$value ;;
+    esac
+done < "$state"
+
+for value in "$ROLE" "$ADDRESS" "$NETMASK" "$GATEWAY" "$DNS_SERVERS" "$DOMAIN" "$NIC_NAME" "$TARGET_DISK"; do
+    [ -n "$value" ] || {
+        echo "dns.postinst: incomplete installer state" >&2
+        exit 1
+    }
+done
+
+install -d -m 0755 /target/etc/dns-appliance
+install -m 0644 "$state" /target/etc/dns-appliance/install.env
+
+printf '%s\n' "$ROLE" > /target/etc/hostname
+printf '127.0.0.1 localhost\n127.0.1.1 %s.%s %s\n' "$ROLE" "$DOMAIN" "$ROLE" > /target/etc/hosts
+
+install -d -m 0755 /target/etc/network/interfaces.d
+printf 'auto lo\niface lo inet loopback\n\nsource /etc/network/interfaces.d/*\n' \
+    > /target/etc/network/interfaces
+cat > /target/etc/network/interfaces.d/dns-lan <<EOF
+auto $NIC_NAME
+iface $NIC_NAME inet static
+    address $ADDRESS
+    netmask $NETMASK
+    gateway $GATEWAY
+    dns-nameservers $DNS_SERVERS
+    dns-search $DOMAIN
+EOF
+rm -f /target/etc/resolv.conf
+printf 'search %s\nnameserver %s\n' "$DOMAIN" "$DNS_SERVERS" > /target/etc/resolv.conf
+
+install -d -m 0700 /target/home/operator/.ssh
+install -m 0600 /cdrom/simple-cdd/operator-authorized-keys /target/home/operator/.ssh/authorized_keys
+in-target chown -R operator:operator /home/operator/.ssh
+
+install -d -m 0755 /target/etc/ssh/sshd_config.d
+install -m 0644 /cdrom/simple-cdd/sshd-hardening.conf \
+    /target/etc/ssh/sshd_config.d/60-dns-appliance.conf
+install -m 0644 /cdrom/simple-cdd/nftables.conf /target/etc/nftables.conf
+
+in-target systemctl enable ssh.service
+in-target systemctl enable cockpit.socket
+in-target systemctl enable nftables.service
+in-target systemctl enable prometheus-node-exporter.service
