@@ -133,8 +133,25 @@ root=$(make_fixture duplicate-disk)
 make_disk "$root" sdc 0 'TEST SSD' 'TEST-DISK-01' 2097152
 expect_failure duplicate_matching_disks_are_blocked "$root"
 
+root=$(make_fixture extra-nonmatching-disk)
+make_disk "$root" sdc 0 'OTHER SSD' 'OTHER-DISK-02' 4194304
+expect_success extra_nonmatching_disk_is_ignored "$root"
+
+root=$(make_fixture undersized-disk)
+printf '1024\n' > "$root/sys/class/block/sda/size"
+expect_failure undersized_disk_is_blocked "$root"
+
+root=$(make_fixture removable-target)
+printf '1\n' > "$root/sys/class/block/sda/removable"
+expect_failure removable_target_is_blocked "$root"
+
 root=$(make_fixture installer-media)
 printf '/dev/sda /cdrom iso9660 ro 0 0\n' > "$root/mounts"
 expect_failure installer_media_is_never_targeted "$root"
 
-printf 'RESULT 5/5 install-gate simulations passed\n'
+root=$(make_fixture duplicate-mac)
+mkdir -p "$root/sys/class/net/en1"
+printf '00:11:22:33:44:55\n' > "$root/sys/class/net/en1/address"
+expect_failure duplicate_matching_interfaces_are_blocked "$root"
+
+printf 'RESULT 9/9 install-gate simulations passed\n'
