@@ -6,6 +6,8 @@ network:
   prefix_length: 16
   gateway: 10.0.0.1
   domain: home.arpa
+  management_cidr: 10.0.0.0/24
+  cluster_domain: dns-cluster.home.arpa
 
 nodes:
   dns01:

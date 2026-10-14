@@ -19,6 +19,7 @@ work/
 # Machine-local installer inputs and Simple-CDD output
 inventory/local/
 installer/inputs/operator-authorized-keys
+installer/inputs/age-recipient
 installer/simple-cdd/generated/
 installer/simple-cdd/images/
 installer/simple-cdd/tmp/

@@ -1,8 +1,8 @@
 #!/bin/sh
 set -eu
 
-script_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
-repo_root=$(CDPATH= cd -- "$script_dir/.." && pwd)
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
 gate=$repo_root/installer/scripts/install-gate
 test_root=$(mktemp -d "${TMPDIR:-/tmp}/dns-install-gate.XXXXXX")
 trap 'rm -rf "$test_root"' EXIT HUP INT TERM
@@ -10,6 +10,9 @@ trap 'rm -rf "$test_root"' EXIT HUP INT TERM
 mkdir -p "$test_root/bin"
 cat > "$test_root/bin/sha256sum" <<'EOF'
 #!/bin/sh
+if [ -x /usr/bin/sha256sum ]; then
+    exec /usr/bin/sha256sum "$@"
+fi
 exec shasum -a 256 "$@"
 EOF
 cat > "$test_root/bin/debconf-set" <<'EOF'
@@ -24,7 +27,11 @@ normalize() {
 }
 
 hash_value() {
-    printf '%s' "$1" | normalize | shasum -a 256 | awk '{print $1}'
+    if command -v shasum >/dev/null 2>&1; then
+        printf '%s' "$1" | normalize | shasum -a 256 | awk '{print $1}'
+    else
+        printf '%s' "$1" | normalize | /usr/bin/sha256sum | awk '{print $1}'
+    fi
 }
 
 make_disk() {
@@ -44,7 +51,8 @@ make_disk() {
 make_fixture() {
     name=$1
     root=$test_root/$name
-    mkdir -p "$root/media" "$root/run" "$root/sys/class/dmi/id" "$root/sys/class/net/en0"
+    mkdir -p "$root/media" "$root/run" "$root/enrollment" \
+        "$root/sys/class/dmi/id" "$root/sys/class/net/en0"
 
     printf 'HP ProDesk Test\n' > "$root/sys/class/dmi/id/product_name"
     printf 'TEST-SKU\n' > "$root/sys/class/dmi/id/product_sku"
@@ -64,6 +72,9 @@ netmask=255.255.0.0
 gateway=10.0.0.1
 dns_servers=10.0.0.1
 domain=home.arpa
+lan_cidr=10.0.0.0/16
+management_cidr=10.0.0.0/16
+cluster_domain=dns-cluster.home.arpa
 expected_product_name_sha256=$(hash_value 'HP ProDesk Test')
 expected_product_sku_sha256=$(hash_value 'TEST-SKU')
 expected_system_serial_sha256=$(hash_value 'TEST-SERIAL-01')
@@ -87,6 +98,7 @@ run_gate() {
     DNS_INSTALLER_SYS_ROOT="$root/sys" \
     DNS_INSTALLER_MOUNTS_FILE="$root/mounts" \
     DNS_INSTALLER_DEBCONF_SET="$test_root/bin/debconf-set" \
+    DNS_INSTALLER_ENROLLMENT_DIR="$root/enrollment" \
     DNS_TEST_DEBCONF_LOG="$root/debconf.log" \
     PATH="$test_root/bin:$PATH" \
         /bin/sh "$gate" "$phase"
@@ -97,6 +109,9 @@ expect_success() {
     root=$2
     if run_gate "$root" select-disk > "$root/output.log" 2>&1 &&
         grep -q '^TARGET_DISK=/dev/sda$' "$root/run/install.env" &&
+        grep -q '^TARGET_DISK_MODEL=TEST SSD$' "$root/run/install.env" &&
+        grep -q '^TARGET_DISK_SERIAL=TEST-DISK-01$' "$root/run/install.env" &&
+        grep -q '^NIC_MAC=00:11:22:33:44:55$' "$root/run/install.env" &&
         grep -q '^partman-auto/disk /dev/sda$' "$root/debconf.log"; then
         printf 'PASS %s\n' "$name"
     else
@@ -154,4 +169,31 @@ mkdir -p "$root/sys/class/net/en1"
 printf '00:11:22:33:44:55\n' > "$root/sys/class/net/en1/address"
 expect_failure duplicate_matching_interfaces_are_blocked "$root"
 
-printf 'RESULT 9/9 install-gate simulations passed\n'
+root=$(make_fixture completed-role)
+mkdir -p "$root/enrollment/records/dns01"
+printf 'generation-old\n' > "$root/enrollment/records/dns01/ACTIVE"
+expect_failure completed_role_without_token_is_blocked "$root"
+
+root=$(make_fixture valid-reinstall-token)
+mkdir -p "$root/enrollment/records/dns01" "$root/enrollment/reinstall"
+printf 'generation-old\n' > "$root/enrollment/records/dns01/ACTIVE"
+cat > "$root/enrollment/reinstall/dns01.allow" <<EOF
+role=dns01
+system_uuid_sha256=$(hash_value '11111111-2222-3333-4444-555555555555')
+previous_generation=generation-old
+authorize_erase=true
+EOF
+expect_success matching_reinstall_token_is_allowed "$root"
+
+root=$(make_fixture stale-reinstall-token)
+mkdir -p "$root/enrollment/records/dns01" "$root/enrollment/reinstall"
+printf 'generation-new\n' > "$root/enrollment/records/dns01/ACTIVE"
+cat > "$root/enrollment/reinstall/dns01.allow" <<EOF
+role=dns01
+system_uuid_sha256=$(hash_value '11111111-2222-3333-4444-555555555555')
+previous_generation=generation-old
+authorize_erase=true
+EOF
+expect_failure stale_reinstall_token_is_blocked "$root"
+
+printf 'RESULT 12/12 install-gate simulations passed\n'

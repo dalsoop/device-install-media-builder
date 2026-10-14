@@ -45,6 +45,9 @@ load_config() {
     GATEWAY=
     DNS_SERVERS=
     DOMAIN=
+    LAN_CIDR=
+    MANAGEMENT_CIDR=
+    CLUSTER_DOMAIN=
     EXPECTED_PRODUCT_NAME_SHA256=
     EXPECTED_PRODUCT_SKU_SHA256=
     EXPECTED_SYSTEM_SERIAL_SHA256=
@@ -64,6 +67,9 @@ load_config() {
             gateway) GATEWAY=$value ;;
             dns_servers) DNS_SERVERS=$value ;;
             domain) DOMAIN=$value ;;
+            lan_cidr) LAN_CIDR=$value ;;
+            management_cidr) MANAGEMENT_CIDR=$value ;;
+            cluster_domain) CLUSTER_DOMAIN=$value ;;
             expected_product_name_sha256) EXPECTED_PRODUCT_NAME_SHA256=$value ;;
             expected_product_sku_sha256) EXPECTED_PRODUCT_SKU_SHA256=$value ;;
             expected_system_serial_sha256) EXPECTED_SYSTEM_SERIAL_SHA256=$value ;;
@@ -118,6 +124,14 @@ match_node() {
     [ "$matches" -eq 1 ] || fail "hardware matched $matches inventory entries; expected exactly one"
     load_config "$matched_config"
     NIC_NAME=$matched_nic
+    NIC_MAC=$(read_first_line "$sys_root/class/net/$NIC_NAME/address")
+
+    for value in "$ROLE" "$ADDRESS" "$PREFIX_LENGTH" "$NETMASK" "$GATEWAY" \
+        "$DNS_SERVERS" "$DOMAIN" "$LAN_CIDR" "$MANAGEMENT_CIDR" "$CLUSTER_DOMAIN"; do
+        [ -n "$value" ] || fail "inventory entry for $ROLE is incomplete"
+    done
+
+    check_reinstall_permission
 
     mkdir -p "$state_dir"
     {
@@ -128,7 +142,11 @@ match_node() {
         printf 'GATEWAY=%s\n' "$GATEWAY"
         printf 'DNS_SERVERS=%s\n' "$DNS_SERVERS"
         printf 'DOMAIN=%s\n' "$DOMAIN"
+        printf 'LAN_CIDR=%s\n' "$LAN_CIDR"
+        printf 'MANAGEMENT_CIDR=%s\n' "$MANAGEMENT_CIDR"
+        printf 'CLUSTER_DOMAIN=%s\n' "$CLUSTER_DOMAIN"
         printf 'NIC_NAME=%s\n' "$NIC_NAME"
+        printf 'NIC_MAC=%s\n' "$NIC_MAC"
     } > "$state_file"
 
     set_debconf netcfg/choose_interface "$NIC_NAME"
@@ -139,6 +157,44 @@ match_node() {
     set_debconf netcfg/get_gateway "$GATEWAY"
     set_debconf netcfg/get_nameservers "$DNS_SERVERS"
     set_debconf netcfg/confirm_static true
+}
+
+check_reinstall_permission() {
+    enrollment_dir=${DNS_INSTALLER_ENROLLMENT_DIR:-}
+    mounted_enrollment=false
+
+    if [ -z "$enrollment_dir" ]; then
+        command -v blkid >/dev/null 2>&1 || fail "blkid is required to find DNS-ENROLL"
+        enrollment_device=$(blkid -L DNS-ENROLL 2>/dev/null || true)
+        [ -n "$enrollment_device" ] || fail "DNS-ENROLL partition is missing"
+        enrollment_dir=$state_dir/enrollment
+        mkdir -p "$enrollment_dir"
+        mount -o ro,nodev,nosuid,noexec "$enrollment_device" "$enrollment_dir" ||
+            fail "cannot mount DNS-ENROLL read-only"
+        mounted_enrollment=true
+    fi
+
+    active_file=$enrollment_dir/records/$ROLE/ACTIVE
+    if [ ! -s "$active_file" ]; then
+        [ "$mounted_enrollment" = false ] || umount "$enrollment_dir"
+        return 0
+    fi
+
+    previous_generation=$(sed -n '1p' "$active_file")
+    token=$enrollment_dir/reinstall/$ROLE.allow
+    [ -r "$token" ] || fail "$ROLE already completed generation $previous_generation; reinstall token missing"
+
+    token_role=$(awk -F= '$1 == "role" { print $2 }' "$token")
+    token_uuid=$(awk -F= '$1 == "system_uuid_sha256" { print $2 }' "$token")
+    token_generation=$(awk -F= '$1 == "previous_generation" { print $2 }' "$token")
+    token_authorize=$(awk -F= '$1 == "authorize_erase" { print $2 }' "$token")
+
+    [ "$token_role" = "$ROLE" ] || fail "reinstall token role mismatch"
+    [ "$token_uuid" = "$system_uuid_hash" ] || fail "reinstall token hardware mismatch"
+    [ "$token_generation" = "$previous_generation" ] || fail "reinstall token generation mismatch"
+    [ "$token_authorize" = true ] || fail "reinstall token does not authorize erase"
+
+    [ "$mounted_enrollment" = false ] || umount "$enrollment_dir"
 }
 
 boot_parent_disk() {
@@ -187,7 +243,12 @@ match_disk() {
     done
 
     [ "$disk_matches" -eq 1 ] || fail "disk matched $disk_matches targets; expected exactly one"
-    printf 'TARGET_DISK=%s\n' "$matched_disk" >> "$state_file"
+    matched_name=${matched_disk#/dev/}
+    {
+        printf 'TARGET_DISK=%s\n' "$matched_disk"
+        printf 'TARGET_DISK_MODEL=%s\n' "$(read_first_line "$sys_root/class/block/$matched_name/device/model")"
+        printf 'TARGET_DISK_SERIAL=%s\n' "$(read_first_line "$sys_root/class/block/$matched_name/device/serial")"
+    } >> "$state_file"
     set_debconf partman-auto/disk "$matched_disk"
 }
 

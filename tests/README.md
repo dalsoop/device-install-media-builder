@@ -3,7 +3,7 @@
 `install-gate-simulation.sh` runs the destructive-selection gate against an
 isolated fake sysfs tree. It never opens a real block device.
 
-The simulation covers:
+The 12-case simulation covers:
 
 - one exact HP/NIC/disk match selecting `/dev/sda`;
 - wrong DMI identity stopping before selection;
@@ -11,8 +11,21 @@ The simulation covers:
 - two matching internal disks stopping as ambiguous;
 - an additional non-matching disk being ignored;
 - an undersized or removable target being rejected;
-- the installer media never being selected as the target.
-- two interfaces with the expected MAC stopping as ambiguous.
+- the installer media never being selected as the target;
+- two interfaces with the expected MAC stopping as ambiguous;
+- a completed role being blocked without a reinstall token;
+- a matching generation-bound reinstall token being accepted;
+- a stale reinstall token being rejected.
+
+`repository-contract.sh` validates immutable source lock shapes, required
+artifacts, executable modes, the enrollment schema, and the presence of the
+first-boot safety contracts. GitHub Actions runs all three test scripts and
+ShellCheck.
+
+`management-simulation.sh` covers machine-readable and audited DNS planning,
+the literal apply confirmation, generation-bound reinstall authorization, and
+the `/16` network prerequisite. It stubs network calls and never contacts a DNS
+server.
 
 This simulation is necessary but not sufficient. It does not replace building
 the ISO, booting Debian Installer under BIOS and UEFI, or the physical `dns01`

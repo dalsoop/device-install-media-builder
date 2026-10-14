@@ -13,12 +13,13 @@
     "hardware",
     "installer",
     "ssh_host_key_fingerprints",
+    "certificate_fingerprints",
     "health",
     "completed_at"
   ],
   "properties": {
     "schema_version": { "const": 1 },
-    "generation_id": { "type": "string", "minLength": 1 },
+    "generation_id": { "type": "string", "pattern": "^[0-9a-fA-F-]{36}$" },
     "hostname": { "enum": ["dns01", "dns02", "dns03"] },
     "role": { "enum": ["primary", "secondary"] },
     "address": { "type": "string", "pattern": "^10\\.0\\.5\\.[123]$" },
@@ -52,17 +53,21 @@
     },
     "certificate_fingerprints": {
       "type": "array",
-      "items": { "type": "string" }
+      "minItems": 2,
+      "items": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
     },
     "health": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["dns_udp", "dns_tcp", "technitium", "cockpit"],
+      "required": ["dns_udp", "dns_tcp", "technitium", "cockpit", "ntp", "cluster", "ipv6_policy"],
       "properties": {
         "dns_udp": { "const": "healthy" },
         "dns_tcp": { "const": "healthy" },
         "technitium": { "const": "healthy" },
-        "cockpit": { "const": "healthy" }
+        "cockpit": { "const": "healthy" },
+        "ntp": { "enum": ["healthy", "degraded-offline"] },
+        "cluster": { "enum": ["standalone", "joined"] },
+        "ipv6_policy": { "const": "disabled" }
       }
     },
     "completed_at": { "type": "string", "format": "date-time" }

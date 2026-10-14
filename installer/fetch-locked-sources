@@ -1,0 +1,39 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
+# shellcheck disable=SC1091
+. "$repo_root/build/locks/sources.env"
+
+cache_dir=${DNS_APPLIANCE_CACHE_DIR:-$repo_root/cache}
+archive=$cache_dir/technitium-dns-$TECHNITIUM_VERSION-amd64.oci.tar
+image_ref=$TECHNITIUM_IMAGE@$TECHNITIUM_AMD64_DIGEST
+
+fail() {
+    echo "fetch-locked-sources: $*" >&2
+    exit 1
+}
+
+command -v skopeo >/dev/null 2>&1 || fail "skopeo is required"
+mkdir -p "$cache_dir"
+
+remote_digest=$(skopeo inspect --override-os linux --override-arch amd64 \
+    --format '{{.Digest}}' "docker://$image_ref")
+[ "$remote_digest" = "$TECHNITIUM_AMD64_DIGEST" ] ||
+    fail "Technitium digest mismatch: $remote_digest"
+
+if [ ! -s "$archive" ]; then
+    partial=$archive.partial
+    trap 'rm -f "$partial"' EXIT HUP INT TERM
+    skopeo copy --override-os linux --override-arch amd64 \
+        "docker://$image_ref" "oci-archive:$partial:$TECHNITIUM_IMAGE:$TECHNITIUM_VERSION"
+    mv "$partial" "$archive"
+    trap - EXIT HUP INT TERM
+fi
+
+archive_digest=$(skopeo inspect --format '{{.Digest}}' "oci-archive:$archive")
+[ "$archive_digest" = "$TECHNITIUM_AMD64_DIGEST" ] ||
+    fail "cached OCI archive digest mismatch: $archive_digest"
+
+sha256sum "$archive"
