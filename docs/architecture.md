@@ -8,9 +8,10 @@ The installer image is immutable and contains everything required for an offline
 Debian installation. A separate writable USB partition labeled `DNS-ENROLL`
 stores only enrollment results and sanitized logs.
 
-The boot menu defaults to the installed internal disk. Installation entries are
-manual choices so that keeping the USB inserted for first-boot enrollment does
-not start a second installation.
+The boot menu has no unattended timeout. Installation requires a manual choice,
+so keeping the USB inserted for first-boot enrollment cannot automatically
+start a second installation. Firmware boot order should still prefer the
+internal disk after the pilot.
 
 ### Appliance plane
 
@@ -24,6 +25,12 @@ Each appliance runs only infrastructure required for DNS and host management:
 - encrypted backup and enrollment units
 
 General-purpose AI agents and MCP servers do not run on these machines.
+
+Technitium runs as a root-managed Podman container loaded from an OCI archive
+embedded in the installer. It binds only IPv4, uses explicit recursion ACLs,
+and stores configuration under `/var/lib/technitium`. Cockpit authenticates the
+local `operator` account with a generated per-node password; SSH remains
+public-key-only.
 
 ### Management plane
 
@@ -48,6 +55,9 @@ An installation is complete only when all conditions are true:
 7. The recovery archive is encrypted to the configured age recipient.
 8. Files are atomically committed and synchronized to `DNS-ENROLL`.
 
+NTP may be recorded as `degraded-offline` during a deliberately disconnected
+installation. It must become healthy before router DHCP cutover.
+
 ## Enrollment layout
 
 ```text
@@ -67,3 +77,7 @@ DNS-ENROLL/
 public SSH host-key fingerprints, certificate fingerprints, service health, and
 timestamps. Passwords and private recovery material exist only inside the age
 archive.
+
+`records/<role>/ACTIVE` selects the current completed generation. A reinstall
+is blocked unless `reinstall/<role>.allow` names that exact generation and the
+matching system UUID hash, so an old authorization cannot erase a later install.

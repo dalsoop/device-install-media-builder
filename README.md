@@ -17,25 +17,28 @@ installation must remain functional without Internet access.
 
 ## Current status
 
-The repository now contains the Debian 13 OS installer source: a Simple-CDD
-profile, an unattended preseed, an exact-hardware install gate, SSH-key-only
-operator bootstrap, Cockpit, and a locked-down host firewall. It intentionally
-does **not** contain a generated ISO or real machine inventory.
+The repository contains source for the complete day-0 path: a snapshot-pinned
+Debian 13.7 Simple-CDD profile, exact-hardware erase gates, a digest-pinned
+Technitium 15.6.1 OCI image, retry-safe first boot, generated Cockpit and
+Technitium credentials, encrypted `DNS-ENROLL` writeback, health and backup
+timers, cluster bootstrap, and Git-gated zone plan/apply tooling.
 
-The installer remains blocked until each HP PC is captured into the ignored
-`inventory/local/` directory and its `destructive_install_enabled` flag is
-explicitly changed to `true`. Technitium installation, writable USB enrollment,
-and the reproducible package closure remain later phases.
+It deliberately contains no generated ISO, real HP inventory, password, token,
+private key, or recovery archive. Destructive installation remains disabled
+until each machine is captured into ignored `inventory/local/` files and a
+physical `dns01` pilot is approved.
 
-The isolated install-gate simulation currently passes 9/9 cases on the `m5m1`
-build host. This proves the scripted target-selection decisions only; it is not
-evidence of a booted ISO or completed Debian installation. See the
-[recorded evidence](evidence/2026-10-15-install-gate-simulation.md).
+The isolated simulations cover 12 installer cases plus 4 management safety
+cases, including completed-role and stale reinstall-token rejection. This
+proves scripted decisions only. A booted ISO, Debian installation, Secure Boot,
+internal-disk reboot, USB writeback, and physical DNS service remain
+**unverified** until the gates in [verification](docs/verification.md) are
+completed.
 
 ## Design summary
 
-1. The read-only installer image contains pinned packages and a pinned
-   Technitium image.
+1. The read-only installer image is built from a dated Debian snapshot and a
+   digest-pinned Technitium image; release evidence records every package hash.
 2. The same USB has a writable exFAT partition labeled `DNS-ENROLL`.
 3. The operator selects `dns01`, `dns02`, or `dns03`; internal-disk erasure is
    allowed only after exact hardware and disk checks.
@@ -45,4 +48,5 @@ evidence of a booted ISO or completed Debian installation. See the
    and a management-plane MCP gateway.
 
 Start with [the architecture](docs/architecture.md), [security rules](docs/security.md),
-[the OS installer guide](docs/os-install.md), and [the implementation roadmap](docs/roadmap.md).
+[the OS installer guide](docs/os-install.md), [network cutover](docs/network-cutover.md),
+[recovery](docs/recovery.md), and [verification gates](docs/verification.md).

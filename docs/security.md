@@ -11,6 +11,11 @@
   USB must be encrypted before the first byte is committed.
 - Generated credentials are stable across first-boot retries and are rotated
   after import into the long-lived secret store.
+- The generated `operator` and Technitium bootstrap passwords exist in plaintext
+  only until encrypted enrollment is committed. SSH password authentication
+  remains disabled.
+- A root-only static Technitium token remains on each appliance solely for local
+  health and encrypted backup jobs. It is never written to USB in plaintext.
 - SSH host private-key escrow is disabled by default. Public fingerprints are
   always recorded; encrypted private-key escrow requires a separate decision.
 
@@ -33,7 +38,9 @@ expire automatically.
 ## Network exposure
 
 - DNS: UDP/TCP 53 from the approved LAN.
-- SSH, Cockpit, Technitium API, metrics, and MCP: management sources only.
+- SSH, Cockpit, and metrics: management sources only.
+- Technitium API: management sources plus the three fixed node addresses needed
+  for cluster traffic; it is not open to the rest of the LAN.
 - Technitium management must use TLS before agent write access is enabled.
 - IPv6 exposure follows an explicit policy; an accidental wildcard IPv6 listener
   is treated as a failure.
@@ -47,3 +54,11 @@ expire automatically.
   pull request.
 - Apply one node at a time and verify canary DNS resolution before continuing.
 - Router DHCP settings change only after all three resolvers pass live tests.
+
+## Recovery access tradeoff
+
+`operator` has passwordless sudo because a failed USB write can otherwise leave
+the host reachable by SSH key but impossible to repair. This makes possession of
+the authorized SSH private key equivalent to root access. Compensating controls
+are key-only SSH, management-CIDR firewall restriction, no private key on the
+USB, and host-key fingerprint verification from enrollment.

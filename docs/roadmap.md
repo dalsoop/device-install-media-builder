@@ -1,47 +1,53 @@
-# Implementation roadmap
+# Implementation and verification roadmap
+
+A checked source item is implemented in the repository. It is not proof of
+physical operation; release remains blocked by `docs/verification.md`.
 
 ## Phase 0: source and supply-chain lock
 
-- Record Debian ISO, Debian packages, Technitium OCI image, and build-tool
-  versions with SHA-256 or immutable digests.
-- Add a reproducible image builder that downloads into ignored cache paths.
-- Generate image manifest, checksums, and an SBOM.
+- [x] Pin Debian 13.7, a dated Debian snapshot, Simple-CDD, and the Technitium
+  amd64 OCI manifest digest.
+- [x] Fetch the OCI archive into an ignored cache with digest verification.
+- [x] Generate an ISO manifest, package list and hashes, checksums, and SPDX SBOM.
+- [ ] Rebuild twice on the designated amd64 Debian builder and compare outputs.
 
 ## Phase 1: fail-closed installer
 
-- Implement BIOS and UEFI boot menus with internal disk as the safe default.
-- Build the committed Simple-CDD OS profile and validate its offline package set.
-- Identify the role from exact hardware, serial/UUID, MAC, and disk matches.
-- Refuse duplicate completed roles unless an explicit reinstall path is used.
-- Keep all destructive gates disabled until inventory is complete.
+- [x] Require deliberate installer selection; there is no destructive timeout.
+- [x] Match exact product, serial/UUID, NIC MAC, and internal disk identity.
+- [x] Refuse USB/removable/ambiguous disks and disabled inventory roles.
+- [x] Refuse a completed role without a generation-bound reinstall token.
+- [ ] Boot and complete installs under both BIOS and UEFI/Secure Boot.
 
 ## Phase 2: retry-safe first boot and enrollment
 
-- Generate credentials once and reuse them across retries.
-- Add the `DNS-ENROLL` exFAT data partition.
-- Encrypt recovery output with a dedicated age recipient.
-- Perform atomic write, sync, validation, and completion marking.
-- Remove the Technitium bootstrap plaintext after initialization.
+- [x] Generate stable per-node credentials once and reuse them across retries.
+- [x] Create a separate `DNS-ENROLL` exFAT partition with a guarded writer.
+- [x] Encrypt recovery material to a dedicated native age recipient.
+- [x] Validate schema, atomically rename, sync, and mark completion.
+- [x] Remove bootstrap-password plaintext after enrollment.
+- [ ] Exercise power-loss retries against a real exFAT USB.
 
 ## Phase 3: service and cluster configuration
 
-- Configure firewall and management TLS.
-- Create the Technitium three-node cluster and `home.arpa` zones.
-- Add least-privilege human and agent identities.
-- Add backup, restore, update, rollback, and configuration drift checks.
+- [x] Install digest-pinned Technitium, Cockpit, SSH, firewall, metrics, and NTP.
+- [x] Provide cluster initialization/join and catalog-backed `home.arpa` import.
+- [x] Create separate read, plan, and apply API identities.
+- [x] Add encrypted backup collection and explicit restore tooling.
+- [ ] Move ongoing update policy to `host-infra` and run a rollback drill.
 
 ## Phase 4: agent management plane
 
-- Add desired-state DNS records and a machine-readable preview.
-- Evaluate and pin a safety-focused Technitium MCP gateway.
-- Add read-only-by-default MCP tokens and structured audit logs.
-- Add service discovery names and optional A2A Agent Cards without secrets.
+- [x] Add a Git-owned zone file and machine-readable plan/apply CLI.
+- [x] Require a clean approved commit and explicit `APPLY` confirmation.
+- [x] Emit redacted JSONL audit events and default agents to read-only tokens.
+- [ ] Evaluate and pin a management-host MCP gateway; none runs on appliances.
 
 ## Phase 5: verification and release
 
-- Test no-network install under BIOS and UEFI virtualization.
-- Inject failures after credential generation and during USB writes.
-- Test wrong hardware, extra disks, missing USB, duplicate roles, and corrupted
-  enrollment partitions.
-- Pilot on `dns01`, then install `dns02` and `dns03` one at a time.
-- Publish a tagged installer only after physical verification.
+- [ ] Build the ISO and verify the complete offline package closure.
+- [ ] Test zero-network BIOS, UEFI, USB-left-in, and internal-disk reboot paths.
+- [ ] Inject failures after credential generation and during USB writes.
+- [ ] Pilot `dns01`, then install `dns02` and `dns03` one at a time.
+- [ ] Complete cluster, backup/restore, primary-loss, and DHCP rollback drills.
+- [ ] Publish a tagged installer only after the physical gates pass.

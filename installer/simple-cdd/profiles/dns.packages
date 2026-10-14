@@ -8,8 +8,13 @@ exfatprogs
 jq
 nftables
 openssh-server
+openssl
+podman
 prometheus-node-exporter
+python3-jsonschema
 rsync
 smartmontools
 sudo
 systemd-timesyncd
+unzip
+uuid-runtime
