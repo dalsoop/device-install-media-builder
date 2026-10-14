@@ -1,0 +1,44 @@
+---
+network:
+  cidr: 10.0.0.0/16
+  prefix_length: 16
+  gateway: 10.0.0.1
+  domain: home.arpa
+
+nodes:
+  dns01:
+    address: 10.0.5.1
+    cluster_role: primary
+    expected_product_name: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_product_number: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_system_serial: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_system_uuid: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_mac: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_disk_model: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_disk_serial: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_disk_min_bytes: 0
+    destructive_install_enabled: false
+  dns02:
+    address: 10.0.5.2
+    cluster_role: secondary
+    expected_product_name: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_product_number: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_system_serial: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_system_uuid: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_mac: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_disk_model: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_disk_serial: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_disk_min_bytes: 0
+    destructive_install_enabled: false
+  dns03:
+    address: 10.0.5.3
+    cluster_role: secondary
+    expected_product_name: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_product_number: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_system_serial: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_system_uuid: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_mac: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_disk_model: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_disk_serial: REPLACE_AFTER_PHYSICAL_INSPECTION
+    expected_disk_min_bytes: 0
+    destructive_install_enabled: false

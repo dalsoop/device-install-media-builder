@@ -1,0 +1,25 @@
+.DS_Store
+.env
+.env.*
+!.env.example
+
+# Generated installer inputs and outputs
+artifacts/
+cache/
+downloads/
+work/
+*.iso
+*.img
+*.raw
+*.qcow2
+*.deb
+*.tar
+*.tar.gz
+
+# Credentials and recovery material
+secrets/
+credentials/
+*.age
+*.key
+*.pem
+id_*
