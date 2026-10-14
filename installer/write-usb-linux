@@ -24,7 +24,9 @@ done
 [ "$(id -u)" -eq 0 ] || { echo "write-usb-linux: run as root" >&2; exit 1; }
 [ -b "$device" ] || usage
 [ "$(lsblk -dnro TYPE "$device")" = disk ] || { echo "write-usb-linux: whole disk required" >&2; exit 1; }
-[ -r "$iso" ] && [ -r "$manifest" ] || usage
+if ! { [ -r "$iso" ] && [ -r "$manifest" ]; }; then
+    usage
+fi
 [ "$confirmation" = "ERASE $device" ] || { echo "write-usb-linux: exact erase confirmation required" >&2; exit 1; }
 
 root_source=$(findmnt -nro SOURCE /)
@@ -44,7 +46,9 @@ device_bytes=$(blockdev --getsize64 "$device")
 }
 
 while read -r partition; do
-    [ -n "$partition" ] && umount "$partition" 2>/dev/null || true
+    if [ -n "$partition" ]; then
+        umount "$partition" 2>/dev/null || true
+    fi
 done < <(lsblk -nrpo NAME,TYPE "$device" | awk '$2 == "part" { print $1 }')
 
 dd if="$iso" of="$device" bs=4M conv=fsync status=progress
@@ -76,7 +80,9 @@ mkfs.exfat -n DNS-ENROLL "$partition"
 
 mount_dir=$(mktemp -d /mnt/dns-enroll.XXXXXX)
 cleanup() {
-    mountpoint -q "$mount_dir" && umount "$mount_dir" || true
+    if mountpoint -q "$mount_dir"; then
+        umount "$mount_dir" || true
+    fi
     rmdir "$mount_dir" 2>/dev/null || true
 }
 trap cleanup EXIT HUP INT TERM

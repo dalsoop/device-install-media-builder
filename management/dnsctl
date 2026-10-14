@@ -11,7 +11,9 @@ usage() {
     exit 2
 }
 
-[ -n "$token_file" ] && [ -s "$token_file" ] || usage
+if ! { [ -n "$token_file" ] && [ -s "$token_file" ]; }; then
+    usage
+fi
 token=$(cat "$token_file")
 command=${1:-}
 

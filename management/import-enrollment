@@ -17,7 +17,9 @@ while [ "$#" -gt 0 ]; do
         *) usage ;;
     esac
 done
-[ -d "$enrollment" ] && [ -s "$identity" ] && [ -n "$output" ] || usage
+if ! { [ -d "$enrollment" ] && [ -s "$identity" ] && [ -n "$output" ]; }; then
+    usage
+fi
 install -d -m 0700 "$output"
 
 for role in dns01 dns02 dns03; do
@@ -25,10 +27,11 @@ for role in dns01 dns02 dns03; do
     [ -s "$active" ] || { echo "import-enrollment: $role is incomplete" >&2; exit 1; }
     generation=$(sed -n '1p' "$active")
     record=$enrollment/records/$role/$generation
-    [ -s "$record/COMPLETE" ] && [ -s "$record/public.json" ] && [ -s "$record/recovery.tar.age" ] || {
+    if ! { [ -s "$record/COMPLETE" ] && [ -s "$record/public.json" ] &&
+        [ -s "$record/recovery.tar.age" ]; }; then
         echo "import-enrollment: incomplete record for $role/$generation" >&2
         exit 1
-    }
+    fi
     jq -e --arg role "$role" '.hostname == $role and .health.dns_udp == "healthy" and .health.dns_tcp == "healthy"' \
         "$record/public.json" >/dev/null || {
             echo "import-enrollment: invalid public record for $role" >&2

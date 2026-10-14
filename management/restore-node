@@ -23,7 +23,10 @@ while [ "$#" -gt 0 ]; do
     esac
 done
 
-[ -n "$url" ] && [ -s "$token_file" ] && [ -s "$backup" ] && [ -s "$identity" ] || usage
+if ! { [ -n "$url" ] && [ -s "$token_file" ] && [ -s "$backup" ] &&
+    [ -s "$identity" ]; }; then
+    usage
+fi
 [ "$confirmation" = "RESTORE $url" ] || { echo "restore-node: exact confirmation is required" >&2; exit 1; }
 token=$(cat "$token_file")
 plain=$(mktemp "${TMPDIR:-/tmp}/dns-restore.XXXXXX.zip")
