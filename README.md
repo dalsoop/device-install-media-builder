@@ -1,5 +1,10 @@
 # Gujo Homelab OS Installer
 
+> **Archived:** This module moved to
+> [`dalsoop/gujo-homelab/installer`](https://github.com/dalsoop/gujo-homelab/tree/main/installer).
+> Use or fork the single Gujo Homelab monorepo. This repository remains
+> read-only to preserve history.
+
 [![CI](https://github.com/dalsoop/gujo-homelab-os-installer/actions/workflows/ci.yml/badge.svg)](https://github.com/dalsoop/gujo-homelab-os-installer/actions/workflows/ci.yml)
 
 Build one verified, Korean-first multiboot USB from public operating-system
