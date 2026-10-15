@@ -3,7 +3,7 @@ set -eu
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
-catalog=${USB_MEDIA_CATALOG:-$script_dir/catalog.json}
+catalog=${USB_MEDIA_CATALOG:-$repo_root/work/device-install-media/catalog.json}
 cache_dir=${USB_MEDIA_CACHE_DIR:-$repo_root/cache/usb-media}
 
 fail() {
@@ -14,6 +14,7 @@ fail() {
 for command in curl jq sha256sum; do
     command -v "$command" >/dev/null 2>&1 || fail "$command is required"
 done
+[ -r "$catalog" ] || fail "resolved catalog is missing; run ./device-install-media plan"
 "$script_dir/verify-catalog" "$catalog" >/dev/null
 mkdir -p "$cache_dir"
 

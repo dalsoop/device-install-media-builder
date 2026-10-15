@@ -2,7 +2,8 @@
 set -eu
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
-catalog=${1:-${USB_MEDIA_CATALOG:-$script_dir/catalog.json}}
+repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
+catalog=${1:-${USB_MEDIA_CATALOG:-$repo_root/work/device-install-media/catalog.json}}
 
 fail() {
     echo "usb-media verify-catalog: $*" >&2
@@ -37,9 +38,12 @@ jq -e '
   .schema_version == 1 and
   (.product.name | type == "string" and length > 0) and
   (.product.repository | startswith("https://github.com/")) and
+  (.catalog.repository | startswith("https://github.com/") and endswith(".git")) and
+  (.catalog.revision | type == "string" and test("^[a-f0-9]{40}$")) and
+  (.catalog.collection | safe_rel) and
   (.usb.data_label | type == "string" and length > 0 and length <= 15) and
   (.usb.enrollment_label | type == "string" and length > 0 and length <= 15) and
-  (.usb.enrollment_reserve_mib | type == "number" and . >= 512) and
+  (.usb.enrollment_reserve_mib | type == "number" and . >= 0) and
   (.usb.capacity_overhead_mib | type == "number" and . >= 128) and
   (.usb.default_language | type == "string" and length > 0) and
   .bootloader.implementation == "ventoy" and
@@ -76,7 +80,7 @@ jq -e '
         (.path as $group_path | $entry.destination | startswith($group_path + "/"))))) and
   (([.bootloader.source.filename] + [.entries[].source | select(.kind == "locked-download") | .filename] | length) ==
    ([.bootloader.source.filename] + [.entries[].source | select(.kind == "locked-download") | .filename] | unique | length)) and
-  ([.entries[] | select(.profile_adapter == "dns-appliance")] | length == 1) and
+  ([.entries[] | select(.profile_adapter == "dns-appliance")] | length <= 1) and
   (all(.entries[]; if .profile_adapter == "dns-appliance" then .source.kind == "runtime-artifact" else true end))
 ' "$catalog" >/dev/null || fail "catalog contract is invalid"
 

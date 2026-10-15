@@ -1,115 +1,113 @@
 # Architecture
 
-## Three planes
+## System boundary
+
+The repository has two products with a shared safety model:
+
+1. a fork-oriented multiboot media builder; and
+2. a local DNS-appliance profile that demonstrates guarded unattended
+   installation and post-install management.
+
+The public Device Install Media Catalog is an external, data-only dependency.
+The Builder pins one exact Catalog commit, selects entries, adds fork-local
+entries and bundles, and produces a resolved plan. The Builder never executes
+Catalog code.
+
+Ongoing DNS host configuration and long-lived secrets are outside this
+repository. The repository owns Day-0 media, first boot, enrollment, portable
+verification tools, and explicit management commands.
+
+## Components and dependency direction
+
+```text
+Public Catalog JSON at an exact commit
+                   |
+                   v
+usb-media/resolve-catalog <--- collections/ + local-entries/
+                   |
+                   v
+       resolved catalog plan
+          |        |        |
+          v        v        v
+        fetch    Ventoy    USB writer
+                             |
+                             v
+                    Device Install USB
+
+DNS runtime artifact
+installer/ --> guarded ISO --> USB local entry
+                                  |
+                                  v
+                         three DNS appliances
+                                  |
+                                  v
+                         management/ commands
+```
+
+Dependencies point from orchestration toward data and specialized modules.
+Catalog data does not depend on the Builder. General media entries do not
+depend on the DNS profile. Management commands operate after installation and
+do not become an appliance boot dependency.
+
+## Media composition
+
+`usb-media/composition.json` pins the Catalog repository, 40-character
+revision, index, bootloader, local entries, USB labels, reserve sizes, and
+bundles. `collections/device-install.json` selects public entry IDs and defines
+menu groups. The resolver copies only referenced JSON, validates paths and IDs,
+and emits `work/device-install-media/catalog.json`.
+
+The resolved plan is the single input for download, checksum verification,
+Ventoy menu generation, capacity calculation, and USB staging. Existing
+strategies are:
+
+- `locked-download`: HTTPS plus a lowercase SHA-256;
+- `runtime-artifact`: a caller-supplied file checked against a build manifest;
+- `repository-file`: one reviewed repository file staged as a bundle;
+- `repository-tree`: one reviewed repository directory staged as a bundle.
+
+This is data polymorphism within implemented strategies, not a dynamic plug-in
+system. A new entry using an existing strategy requires data only. A new
+strategy or profile adapter requires Builder code and rejection coverage.
+
+## DNS installation planes
 
 ### Installer plane
 
-The installer image is immutable and contains everything required for an offline
-Debian installation. A separate writable USB partition labeled `DNS-ENROLL`
-stores only enrollment results and sanitized logs.
+The immutable Debian image contains the offline package closure, a digest-pinned
+Technitium OCI image, a checksum-pinned Tailscale archive, inventory matching,
+and first-boot units. A separate `DNS-ENROLL` exFAT partition receives
+plaintext enrollment evidence and age-encrypted recovery secrets.
 
-The boot menu has no unattended timeout. Installation requires a manual choice,
-so keeping the USB inserted for first-boot enrollment cannot automatically
-start a second installation. Firmware boot order should still prefer the
-internal disk after the pilot.
+The boot menu has no destructive timeout. After a deliberate DNS installer
+selection, `install-gate` must resolve exactly one inventory role and exactly
+one non-removable internal disk before partitioning.
 
 ### Appliance plane
 
-Each appliance runs only infrastructure required for DNS and host management:
-
-- Technitium DNS Server
-- OpenSSH
-- Cockpit
-- Tailscale, installed offline and enrolled later
-- firewall rules
-- a small machine-readable health exporter
-- encrypted backup and enrollment units
-
-General-purpose AI agents and MCP servers do not run on these machines.
-
-Technitium runs as a root-managed Podman container loaded from an OCI archive
-embedded in the installer. It binds only IPv4, uses explicit recursion ACLs,
-and stores configuration under `/var/lib/technitium`. Cockpit authenticates the
-local `operator` account with a generated per-node password; SSH remains
-public-key-only.
+Each appliance runs Technitium DNS, OpenSSH, Cockpit, Tailscale, nftables,
+health checks, and encrypted backup jobs. Tailscale is installed offline and
+enrolled later. General AI runtimes and MCP gateways do not run on appliances.
 
 ### Management plane
 
-The management plane owns orchestration and agent access:
+The management host imports enrollment, forms the cluster, applies reviewed DNS
+desired state, mints one-time Tailscale keys, collects encrypted backups,
+performs explicit restore, and hosts the read-only status page.
 
-- Git pull requests hold desired DNS state.
-- CI produces a change plan but does not apply it automatically.
-- A separately deployed MCP gateway exposes read-only tools by default.
-- A limited apply identity is enabled only for approved changes.
-- Prometheus blackbox DNS probes and node metrics verify all three nodes.
-- An OAuth credential kept on the management host mints one one-off,
-  pre-authorized `tag:dns-appliance` key per node and sends only that key over
-  LAN SSH. The key is removed immediately after enrollment.
+Tailscale is a management path only. Appliances reject tailnet DNS, do not
+advertise routes or exit-node service, and do not enable Serve, Funnel, or
+Tailscale SSH.
 
-Tailscale is a management path, not a routing authority. Appliances use
-`--accept-dns=false`, advertise no subnet or exit-node routes, and do not enable
-Tailscale SSH by default. Normal OpenSSH remains the recovery surface.
+## Completion boundary
 
-### Utility media plane
+A DNS installation is complete only when the internal disk boots with the USB
+still attached, static identity is correct, SSH key access works, DNS answers
+over UDP and TCP, Technitium and Cockpit answer, the public enrollment record
+validates, recovery data is encrypted, and the completed generation is
+atomically synchronized to `DNS-ENROLL`.
 
-`usb-media/catalog.json` declares a Korean-first Ventoy menu containing the
-guarded DNS appliance ISO, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE,
-Pop!_OS, and Debian Live. The fetcher, verifier, menu renderer, and writer
-consume the same catalog instead of embedding product branches independently.
+Source simulation, image creation, USB writing, first boot, three-node cluster
+formation, and router DHCP cutover are separate states and must be reported
+separately.
 
-Entries share one contract and resolve through source strategies. A
-`locked-download` entry uses an HTTPS URL and SHA-256, while a
-`runtime-artifact` uses a caller-provided file and build manifest. Repository
-file/tree strategies stage guides and portable tools. Product-specific behavior
-uses an independent profile adapter; only the DNS adapter owns encrypted
-enrollment metadata and guarded unattended installation.
-
-Generated images and ISOs remain outside Git. The exact catalog is copied to
-the assembled USB and hashed alongside all ISO files. A distinct `DNS-ENROLL`
-partition preserves the DNS first-boot contract. A dependency-free, read-only
-status page can run from the USB on Pop!_OS or another Python 3 Linux
-environment to probe all three DNS nodes without installing software on them.
-
-Proxmox VE, Proxmox Backup Server, TrueNAS, and Pop!_OS always remain
-interactive. Their inclusion on the same USB does not authorize unattended
-erasure or reuse the DNS hardware inventory.
-
-## Installation completion contract
-
-An installation is complete only when all conditions are true:
-
-1. The machine booted from its internal disk while the USB remained attached.
-2. Hostname and static address match the selected inventory role.
-3. SSH key authentication succeeds locally.
-4. DNS answers the canary query over UDP and TCP.
-5. Technitium and Cockpit health checks pass.
-6. `public.json` validates against the enrollment schema.
-7. The recovery archive is encrypted to the configured age recipient.
-8. Files are atomically committed and synchronized to `DNS-ENROLL`.
-
-NTP may be recorded as `degraded-offline` during a deliberately disconnected
-installation. It must become healthy before router DHCP cutover.
-
-## Enrollment layout
-
-```text
-DNS-ENROLL/
-├── installer.json
-└── records/
-    ├── dns01/<generation>/
-    │   ├── public.json
-    │   ├── recovery.tar.age
-    │   ├── install.log
-    │   └── COMPLETE
-    ├── dns02/<generation>/
-    └── dns03/<generation>/
-```
-
-`public.json` contains hardware identity, addresses, image/build identifiers,
-public SSH host-key fingerprints, certificate fingerprints, service health, and
-timestamps. Passwords and private recovery material exist only inside the age
-archive.
-
-`records/<role>/ACTIVE` selects the current completed generation. A reinstall
-is blocked unless `reinstall/<role>.allow` names that exact generation and the
-matching system UUID hash, so an old authorization cannot erase a later install.

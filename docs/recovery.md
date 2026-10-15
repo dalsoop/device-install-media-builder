@@ -3,9 +3,12 @@
 ## Enrollment secrets
 
 Each node creates unique `operator` and Technitium administrator passwords plus
-a local static API token. Plaintext exists on the node only until the recovery
-archive is committed. The USB contains only `recovery.tar.age` and public
-fingerprints.
+a local static API token. Plaintext secrets exist on the node only until the
+recovery archive is committed. The USB stores `recovery.tar.age` for secrets,
+but also stores plaintext `public.json`, sanitized install logs, completion
+markers, and generation pointers. `public.json` includes raw product, serial,
+UUID, MAC, and disk identity, so retain and dispose of the USB as sensitive
+operational inventory even though it contains no plaintext password or token.
 
 Import all three completed records on the management machine:
 

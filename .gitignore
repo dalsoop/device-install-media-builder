@@ -1,4 +1,5 @@
 .DS_Store
+.dryforge/
 .env
 .env.*
 !.env.example

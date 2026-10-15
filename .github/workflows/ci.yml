@@ -17,15 +17,17 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y shellcheck jq
       - name: Check shell syntax
         run: |
-          find installer management usb-media tests build -type f -perm -u+x -print0 |
+          find device-install-media installer management usb-media tests build -type f -perm -u+x -print0 |
             xargs -0 -n1 bash -n
       - name: ShellCheck
         run: |
-          find installer management usb-media tests build -type f -perm -u+x -print0 |
+          find device-install-media installer management usb-media tests build -type f -perm -u+x -print0 |
             xargs -0 shellcheck
       - name: Check Python syntax
         run: |
           python3 -c 'compile(open("management/dns-appliance-status-monitor/server.py", encoding="utf-8").read(), "server.py", "exec")'
+      - name: Resolve pinned device media catalog
+        run: usb-media/resolve-catalog
       - name: Run isolated installer simulations
         run: tests/install-gate-simulation.sh
       - name: Run management safety simulations

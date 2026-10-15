@@ -10,8 +10,9 @@ Implemented bootstrap and operating surfaces:
   backed `home.arpa` zone, and emits an age-encrypted agent token bundle.
 - `dnsctl health` uses the reader token.
 - `dnsctl plan` emits current and desired hashes plus a human diff.
-- `dnsctl apply` requires a clean checked-out approved commit and literal
-  `--confirm APPLY`; audit output is JSONL and contains no token.
+- `dnsctl apply` requires literal `--confirm APPLY`, a caller-supplied commit
+  equal to current `HEAD`, and a clean zone file; it does not consume a saved
+  plan or prove pull-request approval. Audit output is JSONL and contains no token.
 - `collect-backups` retrieves only already-encrypted backup files over SSH.
 - `restore-node` requires an explicit target URL, local age identity, and exact
   restore confirmation.
@@ -21,12 +22,14 @@ Implemented bootstrap and operating surfaces:
   three DNS addresses and reports current reachability.
 - `tailscale-enroll` uses a management-host OAuth credential to mint a distinct
   one-off key for each selected node, sends the key over existing LAN SSH,
-  deletes it, and verifies hostname, `tag:dns-appliance`, address, and peer
-  reachability. It never sends the OAuth secret to an appliance.
+  deletes the remote temporary key file, attempts best-effort API revocation,
+  and verifies hostname, `tag:dns-appliance`, address, and peer reachability.
+  Failed revocation can leave the non-reusable key valid until its one-hour
+  expiry. It never sends the OAuth secret to an appliance.
 - `dns-appliance-status-monitor/start` launches a dependency-free Korean status
   page on `127.0.0.1:8080` and checks DNS over UDP/TCP plus Cockpit,
   Technitium, and node-exporter connectivity for all three nodes. It is
-  read-only and is also copied onto the Homelab Install & Recovery USB.
+  read-only and is also copied onto the Device Install USB.
 
 Before enrollment, merge the relevant parts of
 `tailscale-policy.example.hujson` into the reviewed tailnet policy and create an
