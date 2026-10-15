@@ -182,4 +182,3 @@ mv "$temporary/catalog.json" "$output"
 
 echo "카탈로그 준비 완료: $output"
 echo "고정 버전: $revision"
-
