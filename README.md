@@ -13,6 +13,10 @@ The default composition includes Proxmox VE, Proxmox Backup Server, TrueNAS
 SCALE, Pop!_OS, Debian Live, and a guarded offline installer for three HP DNS
 appliances.
 
+> **Fork this Installer repository for normal use.** Your fork owns the OS
+> selection, local profiles, and private hardware policy. Do not fork the
+> Catalog unless you are contributing reusable public OS metadata.
+
 > Current assurance: repository contracts and isolated simulations run in CI.
 > Physical USB behavior, target firmware, Secure Boot, destructive disk
 > selection, and post-install boot are not yet qualified. Source success is not
@@ -20,8 +24,9 @@ appliances.
 
 ## Recommended fork workflow
 
-Fork this repository and manage your collection and local profiles in the fork.
-Send reusable public media metadata to the Catalog repository.
+Fork only this Installer repository and manage your collection and local
+profiles in that fork. Send reusable public media metadata to the Catalog
+repository through its separate contributor workflow.
 
 ```sh
 git clone https://github.com/<your-account>/gujo-homelab-os-installer.git
@@ -51,9 +56,11 @@ sudo ./device-os write-image-macos \
   --confirm 'ERASE /dev/diskN MEDIA_NAME EXACT_BYTES'
 ```
 
-The macOS path requires an image whose exact byte size matches the removable
-target. It rejects internal or virtual disks, compares every written byte, and
-ejects only after verification. Full-disk image assembly currently runs the
+The macOS path requires an MBR image whose exact byte size matches the removable
+target. It rejects internal or virtual targets and GPT images. To prevent Disk
+Arbitration from mounting exFAT while verification runs, it hides the partition
+map, writes and reads back the image body, commits and verifies the first MiB
+last, then unmounts and ejects. Full-disk image assembly currently runs the
 pinned official Linux Ventoy installer in an isolated QEMU guest because
 Ventoy does not ship a native macOS installer.
 

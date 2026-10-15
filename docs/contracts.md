@@ -14,10 +14,18 @@
 | `simulate` | Runs resolution and reports skipped download/write phases |
 | `prepare` | Downloads and verifies locked public artifacts |
 | `write ...` | Destructively assembles the confirmed removable USB |
+| `write-image-macos ...` | Destructively writes a confirmed, size-matched removable disk from an MBR raw image |
 
 Usage errors exit nonzero. A rejected contract, digest, device, or confirmation
 exits nonzero. Success output is human-facing; JSON files are the automation
 surface.
+
+`write-image-macos` requires an MBR image larger than 1 MiB whose byte size
+equals the target. It rejects GPT, internal, virtual, non-removable, and
+non-writable targets before the first write. After exact confirmation, it
+invalidates the old first MiB, writes and reads back the remaining bytes, then
+writes and reads back the first MiB. This ordering prevents macOS from mounting
+the new filesystems before their image bytes have been verified.
 
 `capacity` accepts decimal sizes such as `16GB`, binary sizes such as
 `16GiB`, or a read-only device query. A local locked download is exact only

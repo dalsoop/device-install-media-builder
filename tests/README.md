@@ -35,6 +35,11 @@ reserve plus overhead. It also proves that an oversized unverified estimate
 cannot produce a final too-small verdict when the verified subtotal still fits.
 It never opens a block device.
 
+`macos-writer-simulation.sh` replaces every macOS and block-device command with
+an isolated fixture. It proves that the writer verifies the image body before
+exposing the partition map, verifies the first MiB last, and does not commit or
+eject after a failed body readback. It never opens a real device.
+
 This simulation is necessary but not sufficient. It does not replace building
 the ISO, booting Debian Installer under BIOS and UEFI, or the physical `dns01`
 pilot.

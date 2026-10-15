@@ -41,6 +41,17 @@ Response: inspect live block-device metadata and fix the target or invocation.
 Never bypass the check or copy an old confirmation string. Device names can
 change after reconnect or reboot.
 
+Symptom: a macOS full-disk write completes but a naive whole-device `cmp`
+reports differences inside an exFAT partition.
+
+Cause: Disk Arbitration mounted the newly visible volume after `dd` and the
+filesystem updated ordinary mount metadata before readback.
+
+Response: use `write-image-macos`, which keeps the MBR hidden while writing and
+verifying the image body, then writes and verifies the first MiB last. Do not
+interpret a post-mount raw difference as either payload corruption or proof of
+a correct write; verify the staged image checksums and filesystems separately.
+
 Symptom: the DNS profile was removed but composition validation fails.
 
 Cause: `DNS-ENROLL` space is still reserved without a DNS adapter.

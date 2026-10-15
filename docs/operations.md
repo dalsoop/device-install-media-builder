@@ -7,9 +7,10 @@ SHA-256 implementation. Physical USB assembly runs on Linux with root access,
 Ventoy tooling, block-device utilities, and exFAT support. The DNS ISO builds on
 amd64 Debian 13 with Simple-CDD and the packages named by the build command.
 
-macOS may inspect, select, simulate, and query device capacity with
-`diskutil` and `plutil`. Linux device-capacity queries use `blockdev`.
-macOS is not the supported host for the USB writer or DNS image build.
+macOS may inspect, select, simulate, query device capacity, and write a prepared
+size-matched MBR full-disk image with `diskutil`, `plutil`, `dd`, and `cmp`.
+Linux device-capacity queries use `blockdev`. Full USB assembly and the DNS ISO
+build remain Linux-only.
 
 ## Safe planning workflow
 

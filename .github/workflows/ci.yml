@@ -36,5 +36,7 @@ jobs:
         run: tests/tailscale-enrollment-simulation.sh
       - name: Run polymorphic media catalog simulation
         run: tests/media-catalog-simulation.sh
+      - name: Run macOS writer simulation
+        run: tests/macos-writer-simulation.sh
       - name: Verify repository contracts
         run: tests/repository-contract.sh

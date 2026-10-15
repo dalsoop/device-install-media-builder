@@ -11,7 +11,7 @@ check mark does not imply successful physical installation.
 | HTTPS download and SHA-256 cache verification | Yes | Source tests | Clean Linux download run for current pins |
 | Capacity planning for nominal sizes or read-only device queries | Yes | Read-only 16GB macOS run | CI fixture, runtime-artifact result, and live device query |
 | Korean-first Ventoy menu with no timer | Yes | Source tests | Physical legacy BIOS and UEFI menu |
-| Serial-bound removable USB writer | Yes | Isolated fixture paths | Real disposable USB write and readback |
+| Serial-bound removable USB writer | Yes | Two physical macOS writes; payload SHA-256 and exFAT checks passed | Physical rerun of the two-phase writer and BIOS/UEFI boot |
 | Proxmox VE interactive entry | Yes | Metadata only | Boot and install on disposable disk |
 | Proxmox Backup Server interactive entry | Yes | Metadata only | Boot and install on disposable disk |
 | TrueNAS SCALE interactive entry | Yes | Metadata only | Boot and install on disposable disk |

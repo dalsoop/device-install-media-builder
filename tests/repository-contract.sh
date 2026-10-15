@@ -31,6 +31,7 @@ for file in \
     usb-media/write-image-macos \
     management/dns-appliance-status-monitor/start \
     tests/media-catalog-simulation.sh \
+    tests/macos-writer-simulation.sh \
     tests/management-simulation.sh; do
     [ -x "$repo_root/$file" ] || {
         echo "repository-contract: $file must be executable" >&2
