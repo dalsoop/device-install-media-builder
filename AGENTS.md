@@ -1,8 +1,8 @@
-# Homelab Provisioning
+# Device Install Media Builder
 
-This repository owns guarded homelab installation media and the reproducible,
-offline bootstrap of the three bare-metal DNS appliances `dns01`, `dns02`, and
-`dns03`.
+This repository selects verified public media from Device Install Media Catalog,
+assembles a bootable USB, and owns the guarded offline profile for the three
+bare-metal DNS appliances `dns01`, `dns02`, and `dns03`.
 
 ## Safety invariants
 
@@ -21,15 +21,20 @@ offline bootstrap of the three bare-metal DNS appliances `dns01`, `dns02`, and
   install.
 - Agents receive read-only access by default. DNS writes require a reviewed
   desired-state change, a machine-readable plan, and an explicit apply gate.
-- `usb-media/catalog.json` is the media composition SSOT. Add products through
-  an existing source contract when possible; new source kinds must implement
-  fetch, verify, and stage behavior plus rejection tests. Product exceptions
-  belong in isolated profile adapters and must not weaken shared safety gates.
+- `usb-media/composition.json` pins the external catalog commit and owns USB
+  properties, local profiles, and bundles. `collections/device-install.json`
+  owns the selected public entries. Never execute code fetched from the catalog.
+- Add public operating-system metadata to
+  `dalsoop/device-install-media-catalog`; add private or profile-specific media
+  under `usb-media/local-entries/`. New source kinds must implement fetch,
+  verify, stage, and rejection tests.
 
 ## Repository boundaries
 
-- Day-0 installation media, first boot, USB enrollment, and portable read-only
-  verification tools live here.
+- Media selection, downloads, USB assembly, Day-0 installation profiles, first
+  boot, enrollment, and portable read-only verification tools live here.
+- Public bootloader and operating-system metadata lives in
+  `dalsoop/device-install-media-catalog`.
 - Ongoing host configuration belongs in `gujoai/infra/host-infra`.
 - Long-lived encrypted secrets belong in the existing principal secrets store.
 - The MCP gateway runs on a management host, never on the DNS appliances.

@@ -13,9 +13,15 @@ misleading because the implementation remains DNS-shaped.
 
 ## Decision
 
-`usb-media/catalog.json` is the single source of truth for media entries,
-groups, USB properties, bundles, and the bootloader. Every boot entry implements
-the same identity, destination, menu, behavior, profile, and source contract.
+Public media entries and bootloaders live as one JSON file per item in
+`dalsoop/device-install-media-catalog`. This Builder pins an exact catalog
+commit in `usb-media/composition.json`, selects entries through
+`collections/device-install.json`, and keeps profile-specific runtime entries
+under `usb-media/local-entries/`. The resolver produces one build plan consumed
+by the remaining media pipeline and never executes fetched catalog code.
+
+Every boot entry implements the same identity, destination, menu, behavior,
+profile, and source contract.
 
 Source behavior is selected by `source.kind`:
 
@@ -30,10 +36,11 @@ unattended profile. Generic ISO entries remain interactive.
 
 ## Consequences
 
-Adding another image of an existing source kind changes only the catalog and
-tests. Adding a source kind requires explicit fetch, verification, and staging
-support. Adding a product exception requires a new profile adapter rather than
-weakening a shared path.
+Adding another public image of an existing source kind changes only the Catalog
+and a Builder collection. Private or appliance-specific entries remain in a
+Builder fork. Adding a source kind requires explicit fetch, verification, and
+staging support. Adding a product exception requires a new profile adapter
+rather than weakening a shared path.
 
 The catalog is copied onto every USB and hashed alongside the ISO manifest, so
 the assembled media records the exact declarative input that produced it.

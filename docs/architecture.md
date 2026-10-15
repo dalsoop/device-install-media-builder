@@ -52,10 +52,17 @@ Tailscale SSH by default. Normal OpenSSH remains the recovery surface.
 
 ### Utility media plane
 
-`usb-media/catalog.json` declares a Korean-first Ventoy menu containing the
-guarded DNS appliance ISO, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE,
-Pop!_OS, and Debian Live. The fetcher, verifier, menu renderer, and writer
-consume the same catalog instead of embedding product branches independently.
+`usb-media/composition.json` pins an exact commit of the public Device Install
+Media Catalog. `collections/device-install.json` selects public entries, while
+`usb-media/local-entries/` holds profile-specific runtime artifacts such as the
+guarded DNS appliance installer. `usb-media/resolve-catalog` combines those
+inputs into one verified build plan without executing code from the fetched
+catalog.
+
+The default Korean-first Ventoy menu contains the guarded DNS appliance ISO,
+Proxmox VE, Proxmox Backup Server, TrueNAS SCALE, Pop!_OS, and Debian Live. The
+fetcher, verifier, menu renderer, and writer consume the resolved plan instead
+of embedding product branches independently.
 
 Entries share one contract and resolve through source strategies. A
 `locked-download` entry uses an HTTPS URL and SHA-256, while a

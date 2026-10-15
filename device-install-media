@@ -1,0 +1,124 @@
+#!/bin/sh
+set -eu
+
+repo_root=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+composition=$repo_root/usb-media/composition.json
+collection=$(jq -er '.collection' "$composition")
+collection=$repo_root/$collection
+resolved=${USB_MEDIA_CATALOG:-$repo_root/work/device-install-media/catalog.json}
+
+usage() {
+    cat <<'EOF'
+Device Install Media Builder
+
+사용법:
+  ./device-install-media available          카탈로그에서 고를 수 있는 항목
+  ./device-install-media include <id>        기본 USB 구성에 항목 추가
+  ./device-install-media exclude <id>        기본 USB 구성에서 항목 제거
+  ./device-install-media plan                현재 담길 내용과 안전 정책 확인
+  ./device-install-media simulate            다운로드·디스크 기록 없는 전체 예행연습
+  ./device-install-media prepare             카탈로그 해결 후 이미지 다운로드·검증
+  sudo ./device-install-media write <옵션>   확인된 제거식 USB에 기록
+
+USB 기록 옵션은 usb-media/write-usb-linux와 같다. write는 대상 USB를 지우므로
+장치 경로와 시리얼이 들어간 정확한 --confirm 문구가 반드시 필요하다.
+EOF
+}
+
+fail() {
+    echo "Device Install Media Builder: $*" >&2
+    exit 1
+}
+
+command -v jq >/dev/null 2>&1 || fail "jq 명령이 필요합니다"
+
+resolve() {
+    "$repo_root/usb-media/resolve-catalog" >/dev/null
+}
+
+show_plan() {
+    resolve
+    echo "Device Install USB에 담길 항목"
+    echo
+    jq -r '.entries[] |
+      "- [" +
+      (if .boot_behavior == "guarded-unattended" then "자동 설치·보호됨"
+       elif .boot_behavior == "interactive-installer" then "대화형 설치"
+       else "라이브 도구" end) +
+      "] " + .menu_alias' "$resolved"
+    echo
+    echo "USB 이름: $(jq -r '.usb.data_label' "$resolved")"
+    echo "기본 언어: 한국어"
+    echo "카탈로그 커밋: $(jq -r '.catalog.revision' "$resolved")"
+    echo "자동 메뉴 타이머: 사용 안 함"
+    if jq -e '.entries[] | select(.profile_adapter == "dns-appliance")' "$resolved" >/dev/null; then
+        echo "DNS 설치 보호: HP 인벤토리·재설치 승인·내부 디스크가 모두 일치해야 실행"
+        echo "DNS 등록 파티션: $(jq -r '.usb.enrollment_label' "$resolved")"
+    fi
+}
+
+command=${1:-help}
+case "$command" in
+    available)
+        resolve
+        selected=$(jq -c '.entries' "$collection")
+        catalog_root=${DEVICE_MEDIA_CATALOG_DIR:-$repo_root/cache/catalogs/$(jq -r '.catalog.revision' "$composition")}
+        index=$catalog_root/$(jq -r '.catalog.index' "$composition")
+        jq -r --argjson selected "$selected" '
+          .entries[] as $entry |
+          (if ($selected | index($entry.id)) then "[담김] " else "[선택] " end) + $entry.id
+        ' "$index"
+        ;;
+    include)
+        id=${2:-}
+        [ -n "$id" ] || fail "추가할 항목 ID를 입력하세요"
+        resolve
+        catalog_root=${DEVICE_MEDIA_CATALOG_DIR:-$repo_root/cache/catalogs/$(jq -r '.catalog.revision' "$composition")}
+        index=$catalog_root/$(jq -r '.catalog.index' "$composition")
+        jq -e --arg id "$id" '.entries[] | select(.id == $id)' "$index" >/dev/null ||
+            fail "카탈로그에 없는 항목입니다: $id"
+        temporary=$(mktemp)
+        jq --arg id "$id" '.entries = ((.entries + [$id]) | unique)' "$collection" > "$temporary"
+        mv "$temporary" "$collection"
+        echo "추가했습니다: $id"
+        ;;
+    exclude)
+        id=${2:-}
+        [ -n "$id" ] || fail "제외할 항목 ID를 입력하세요"
+        temporary=$(mktemp)
+        jq --arg id "$id" '.entries = [.entries[] | select(. != $id)]' "$collection" > "$temporary"
+        mv "$temporary" "$collection"
+        echo "제외했습니다: $id"
+        ;;
+    plan)
+        show_plan
+        ;;
+    simulate)
+        echo "[1/4] 고정된 카탈로그를 확인합니다."
+        resolve
+        echo "[2/4] 선택한 항목과 로컬 프로필을 합칩니다."
+        show_plan
+        echo
+        echo "[3/4] 이미지 다운로드와 SHA-256 검증: 실행하지 않음"
+        echo "[4/4] USB 파티션 삭제와 기록: 실행하지 않음"
+        echo
+        echo "예행연습 완료: 네트워크 이미지와 디스크는 변경되지 않았습니다."
+        ;;
+    prepare)
+        resolve
+        USB_MEDIA_CATALOG=$resolved "$repo_root/usb-media/fetch-images"
+        ;;
+    write)
+        shift
+        resolve
+        USB_MEDIA_CATALOG=$resolved exec "$repo_root/usb-media/write-usb-linux" "$@"
+        ;;
+    help|-h|--help)
+        usage
+        ;;
+    *)
+        usage >&2
+        exit 2
+        ;;
+esac
+

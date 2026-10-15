@@ -3,7 +3,7 @@ set -eu
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
-catalog=$repo_root/usb-media/catalog.json
+catalog=$repo_root/work/device-install-media/catalog.json
 verify=$repo_root/usb-media/verify-catalog
 render=$repo_root/usb-media/render-ventoy-config
 temporary=$(mktemp -d)
@@ -21,6 +21,7 @@ expect_rejected() {
     fi
 }
 
+"$repo_root/usb-media/resolve-catalog" >/dev/null
 "$verify" "$catalog" >/dev/null
 "$render" "$catalog" > "$temporary/ventoy.json"
 jq -e '

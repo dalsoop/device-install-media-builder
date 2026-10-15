@@ -56,13 +56,15 @@ physical operation; release remains blocked by `docs/verification.md`.
 - [ ] Complete cluster, backup/restore, primary-loss, and DHCP rollback drills.
 - [ ] Publish a tagged installer only after the physical gates pass.
 
-## Phase 6: Homelab Install & Recovery USB
+## Phase 6: Device Install USB
 
-- [x] Define a polymorphic media catalog for pinned downloads, runtime
-  artifacts, repository bundles, menu metadata, and isolated profile adapters.
+- [x] Split the public, per-entry Device Install Media Catalog from the
+  fork-oriented Device Install Media Builder.
+- [x] Pin the catalog repository commit and resolve selected public entries with
+  local runtime profiles without executing fetched code.
 - [x] Pin Ventoy, Debian Live, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE,
-  and Pop!_OS downloads and checksums in that catalog.
-- [x] Add a serial-bound Linux writer that creates `INSTALL-RECOVER` and a separate
+  and Pop!_OS downloads and checksums in the public catalog.
+- [x] Add a serial-bound Linux writer that creates `DEVICE-INSTALL` and a separate
   `DNS-ENROLL` partition.
 - [x] Add Korean-first Ventoy aliases, a Korean Pop!_OS guide, and a portable
   three-node DNS appliance status monitor.

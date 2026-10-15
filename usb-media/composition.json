@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "product": {
+    "name": "Device Install USB",
+    "repository": "https://github.com/dalsoop/device-install-media-builder"
+  },
+  "catalog": {
+    "repository": "https://github.com/dalsoop/device-install-media-catalog.git",
+    "revision": "f8b15d51aabf70854f369ea92ed225aa75637f5f",
+    "index": "catalog/index.json",
+    "bootloader": "ventoy"
+  },
+  "collection": "collections/device-install.json",
+  "local_entries": [
+    "usb-media/local-entries/dns-appliance.json"
+  ],
+  "usb": {
+    "data_label": "DEVICE-INSTALL",
+    "enrollment_label": "DNS-ENROLL",
+    "enrollment_reserve_mib": 2048,
+    "capacity_overhead_mib": 768,
+    "default_language": "ko_KR"
+  },
+  "bundles": [
+    {
+      "id": "pop-os-korean-guide",
+      "destination": "guides/POP_OS_KO.md",
+      "source": { "kind": "repository-file", "path": "usb-media/guides/pop-os-ko.md" }
+    },
+    {
+      "id": "dns-appliance-status-monitor",
+      "destination": "tools/dns-appliance-status-monitor",
+      "source": { "kind": "repository-tree", "path": "management/dns-appliance-status-monitor" }
+    }
+  ]
+}
+
