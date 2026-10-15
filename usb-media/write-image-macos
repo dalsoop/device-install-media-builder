@@ -12,9 +12,9 @@ usage: sudo usb-media/write-image-macos \
   --device /dev/diskN \
   --confirm 'ERASE /dev/diskN MEDIA_NAME EXACT_BYTES'
 
-The raw image must have exactly the same byte size as the removable target.
-The command erases the entire target, performs a byte-for-byte readback, and
-ejects the device only after verification succeeds.
+The raw MBR image must have exactly the same byte size as the removable target.
+The command keeps the partition map hidden while it writes and verifies the
+image body, commits and verifies the first MiB last, then unmounts and ejects.
 EOF
     exit 2
 }
@@ -62,6 +62,17 @@ image_bytes=$(stat -f %z "$image")
 [ "$image_bytes" = "$device_bytes" ] ||
     fail "image and target sizes differ: image=$image_bytes target=$device_bytes"
 
+prefix_bytes=1048576
+[ "$image_bytes" -gt "$prefix_bytes" ] || fail "raw image is too small"
+mbr_type=$(od -An -tu1 -j 450 -N 1 "$image" | tr -d '[:space:]')
+mbr_signature=$(od -An -tx1 -j 510 -N 2 "$image" | tr -d '[:space:]')
+[ "$mbr_signature" = 55aa ] || fail "raw image does not contain an MBR signature"
+if [ -z "$mbr_type" ] || [ "$mbr_type" -eq 0 ]; then
+    fail "raw image has no first MBR partition"
+fi
+[ "$mbr_type" -ne 238 ] || fail "GPT images are not supported by the two-phase macOS writer"
+body_bytes=$((image_bytes - prefix_bytes))
+
 expected="ERASE $device $media_name $device_bytes"
 [ "$confirmation" = "$expected" ] ||
     fail "exact confirmation required: $expected"
@@ -73,9 +84,22 @@ echo "warning: all existing partitions and data will be erased"
 
 diskutil unmountDisk "$device"
 raw_device=/dev/r${device#/dev/}
-dd if="$image" of="$raw_device" bs=4m
+
+# Hide the old partition map before writing. Disk Arbitration cannot auto-mount
+# the new exFAT volumes while the image body is written and read back.
+dd if=/dev/zero of="$raw_device" bs=1m count=1 conv=notrunc
 sync
-cmp -n "$image_bytes" "$image" "$raw_device"
+dd if="$image" of="$raw_device" bs=1m skip=1 seek=1 conv=notrunc
+sync
+cmp -i "$prefix_bytes:$prefix_bytes" -n "$body_bytes" "$image" "$raw_device"
+
+# Expose the verified image only after its body is proven. macOS may then mount
+# an exFAT volume and update ordinary filesystem metadata, so verify the MBR and
+# boot prefix independently before immediately unmounting and ejecting.
+dd if="$image" of="$raw_device" bs=1m count=1 conv=notrunc
+sync
+cmp -n "$prefix_bytes" "$image" "$raw_device"
+diskutil unmountDisk "$device"
 diskutil eject "$device"
 
-echo "write-image-macos: byte-for-byte verification passed and $device was ejected"
+echo "write-image-macos: two-phase raw readback passed and $device was ejected"
