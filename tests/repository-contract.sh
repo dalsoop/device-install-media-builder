@@ -26,7 +26,9 @@ for file in \
     usb-media/resolve-catalog \
     usb-media/verify-catalog \
     usb-media/render-ventoy-config \
+    usb-media/calculate-capacity \
     usb-media/write-usb-linux \
+    usb-media/write-image-macos \
     management/dns-appliance-status-monitor/start \
     tests/media-catalog-simulation.sh \
     tests/management-simulation.sh; do
@@ -46,7 +48,7 @@ for required in \
     usb-media/local-entries/dns-appliance.json \
     collections/device-install.json \
     usb-media/guides/pop-os-ko.md \
-    docs/decisions/0002-polymorphic-media-catalog.md \
+    docs/tracking/decisions/0002-pinned-declarative-catalog.md \
     management/dns-appliance-status-monitor/config.json \
     management/dns-appliance-status-monitor/server.py \
     .github/workflows/ci.yml; do
