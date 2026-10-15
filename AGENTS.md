@@ -1,7 +1,9 @@
 # Gujo Homelab OS Installer
 
-This fork-oriented repository assembles verified public installation media into
-one multiboot USB. General media composition is the primary product. The guarded
+This engine repository assembles verified public installation media into one
+multiboot USB. Ordinary users create a Gujo Homelab World Playbook from its
+GitHub template rather than forking this repository. General media composition
+is the primary product. The guarded
 offline installer for three HP DNS appliances is a bundled local reference
 profile, not the identity of the whole repository.
 
@@ -86,8 +88,12 @@ gujo-homelab-os-installer/
 ## Change and verification workflow
 
 - Protect `main`; land substantive changes through pull requests.
-- Change public OS metadata in the Catalog. Keep private, organization-specific,
-  and hardware-specific entries under `usb-media/local-entries/`.
+- User-owned selection and environment intent belong in the World Playbook.
+  Do not direct ordinary users to fork this Installer or the Catalog.
+- Change public OS metadata in the Catalog. The existing
+  `usb-media/local-entries/` content is an Installer-owned reference profile;
+  new user-specific selection, hardware binding, and policy belong in the World
+  Playbook once the external consumer is implemented.
 - Existing source kinds are data-driven. A new source kind or profile adapter
   requires fetch, verify, stage, success, and rejection coverage.
 - `dnsctl apply` currently enforces literal `APPLY`, a caller-supplied commit

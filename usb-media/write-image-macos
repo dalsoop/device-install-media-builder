@@ -67,7 +67,9 @@ prefix_bytes=1048576
 mbr_type=$(od -An -tu1 -j 450 -N 1 "$image" | tr -d '[:space:]')
 mbr_signature=$(od -An -tx1 -j 510 -N 2 "$image" | tr -d '[:space:]')
 [ "$mbr_signature" = 55aa ] || fail "raw image does not contain an MBR signature"
-[ -n "$mbr_type" ] && [ "$mbr_type" -ne 0 ] || fail "raw image has no first MBR partition"
+if [ -z "$mbr_type" ] || [ "$mbr_type" -eq 0 ]; then
+    fail "raw image has no first MBR partition"
+fi
 [ "$mbr_type" -ne 238 ] || fail "GPT images are not supported by the two-phase macOS writer"
 body_bytes=$((image_bytes - prefix_bytes))
 
