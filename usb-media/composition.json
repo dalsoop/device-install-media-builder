@@ -15,7 +15,7 @@
     "usb-media/local-entries/dns-appliance.json"
   ],
   "usb": {
-    "data_label": "DEVICE-INSTALL",
+    "data_label": "DEVICE-INST",
     "enrollment_label": "DNS-ENROLL",
     "enrollment_reserve_mib": 2048,
     "capacity_overhead_mib": 768,

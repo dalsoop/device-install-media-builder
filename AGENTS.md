@@ -1,49 +1,97 @@
 # Device Install Media Builder
 
-This repository selects verified public media from Device Install Media Catalog,
-assembles a bootable USB, and owns the guarded offline profile for the three
-bare-metal DNS appliances `dns01`, `dns02`, and `dns03`.
+This fork-oriented repository assembles verified public installation media into
+one multiboot USB. General media composition is the primary product. The guarded
+offline installer for three HP DNS appliances is a bundled local reference
+profile, not the identity of the whole repository.
 
-## Safety invariants
+## Project map
 
-- Never commit passwords, API tokens, private keys, recovery archives, or USB
-  enrollment output. Public SSH keys and age recipients are allowed only in
-  explicitly named public-input files.
-- Never commit ISO, QCOW2, OCI archives, Debian packages, or generated disks.
-  Commit versioned download locations and SHA-256 digests instead.
-- Installer code must fail closed unless the selected role, HP product identity,
-  system serial/UUID, NIC MAC, and internal disk identity match inventory.
-- A successful install is not complete until the installed disk boots, DNS UDP
-  and TCP probes pass, management services answer, and encrypted enrollment data
-  is atomically written to the USB data partition.
-- The installer may erase only the resolved internal disk. The USB boot device,
-  removable devices, and unresolved or multiple candidates must always stop the
-  install.
-- Agents receive read-only access by default. DNS writes require a reviewed
-  desired-state change, a machine-readable plan, and an explicit apply gate.
-- `usb-media/composition.json` pins the external catalog commit and owns USB
-  properties, local profiles, and bundles. `collections/device-install.json`
-  owns the selected public entries. Never execute code fetched from the catalog.
-- Add public operating-system metadata to
-  `dalsoop/device-install-media-catalog`; add private or profile-specific media
-  under `usb-media/local-entries/`. New source kinds must implement fetch,
-  verify, stage, and rejection tests.
+```text
+device-install-media-builder/
+├── AGENTS.md
+├── CLAUDE.md
+├── device-install-media
+├── collections/
+│   ├── AGENTS.md
+│   └── device-install.json
+├── usb-media/
+│   ├── AGENTS.md
+│   ├── composition.json
+│   ├── local-entries/
+│   ├── resolve-catalog
+│   ├── verify-catalog
+│   ├── fetch-images
+│   ├── calculate-capacity
+│   ├── write-usb-linux
+│   └── write-image-macos
+├── installer/
+│   ├── AGENTS.md
+│   ├── build-image
+│   ├── scripts/install-gate
+│   └── payload/
+├── management/
+│   ├── AGENTS.md
+│   ├── dnsctl
+│   ├── cluster-bootstrap
+│   ├── tailscale-enroll
+│   └── dns-appliance-status-monitor/
+│       └── AGENTS.md
+├── build/AGENTS.md
+├── inventory/AGENTS.md
+├── schemas/AGENTS.md
+├── tests/AGENTS.md
+├── zones/AGENTS.md
+└── docs/
+    ├── architecture.md
+    ├── business-rules.md
+    ├── security.md
+    ├── standards.md
+    ├── engineering-notes.md
+    ├── operations.md
+    ├── contracts.md
+    └── tracking/
+        ├── status.md
+        ├── findings.md
+        └── decisions/
+            ├── index.md
+            └── NNNN-*.md
+```
 
-## Repository boundaries
+## Hard rules
 
-- Media selection, downloads, USB assembly, Day-0 installation profiles, first
-  boot, enrollment, and portable read-only verification tools live here.
-- Public bootloader and operating-system metadata lives in
-  `dalsoop/device-install-media-catalog`.
-- Ongoing host configuration belongs in `gujoai/infra/host-infra`.
-- Long-lived encrypted secrets belong in the existing principal secrets store.
-- The MCP gateway runs on a management host, never on the DNS appliances.
+- Never commit secrets, recovery archives, real hardware inventory, enrollment
+  output, generated media, packages, or disk images. Only explicitly public
+  inputs such as SSH public keys and age recipients may be tracked.
+- Planning and simulation never write disks. USB and DNS installation writes
+  require live target identity checks and exact target-specific confirmation;
+  zero, removable, installer-media, or ambiguous internal candidates fail closed.
+- Treat the public Catalog as untrusted data: pin one exact commit, execute none
+  of its code, and validate its JSON again in the Builder.
+- General installers remain interactive. DNS unattended installation is limited
+  to its local guarded adapter and generation-bound reinstall authorization.
+- Report source, VM, physical-media, firmware, installation, and network
+  verification as separate states; one never implies the next.
 
-## Change workflow
+## Read before changing
 
-- Protect `main`; make substantive changes through pull requests.
-- Keep destructive behavior disabled until a physical `dns01` pilot passes.
-- Test BIOS and UEFI paths, zero-network installation, retry behavior, and
-  fail-closed disk selection before publishing an installer release.
-- A release contains checksums and manifests. Writing a release to a physical
-  USB is a separate, explicitly approved operation.
+- Always read `docs/standards.md`, `docs/engineering-notes.md`, and the
+  `AGENTS.md` in the directory being changed.
+- Read all of `docs/security.md` before changing disk erasure, credentials,
+  privilege, or network exposure.
+- Read `docs/contracts.md` before changing JSON, CLI, USB, or enrollment formats.
+- Read `docs/operations.md` before release, USB writing, installation, or restore work.
+- Record ownership or safety decisions under `docs/tracking/decisions/`.
+
+## Change and verification workflow
+
+- Protect `main`; land substantive changes through pull requests.
+- Change public OS metadata in the Catalog. Keep private, organization-specific,
+  and hardware-specific entries under `usb-media/local-entries/`.
+- Existing source kinds are data-driven. A new source kind or profile adapter
+  requires fetch, verify, stage, success, and rejection coverage.
+- `dnsctl apply` currently enforces literal `APPLY`, a caller-supplied commit
+  equal to `HEAD`, and a clean zone file. Human review and plan comparison are
+  operational requirements, not fully machine-enforced approval proofs.
+- Releasing an image and writing a physical USB are separate approvals.
+

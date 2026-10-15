@@ -16,12 +16,28 @@ Device Install Media Builder
   ./device-install-media include <id>        기본 USB 구성에 항목 추가
   ./device-install-media exclude <id>        기본 USB 구성에서 항목 제거
   ./device-install-media plan                현재 담길 내용과 안전 정책 확인
+  ./device-install-media capacity [옵션]     16/32/64GB 또는 실제 장치 용량 판정
   ./device-install-media simulate            다운로드·디스크 기록 없는 전체 예행연습
   ./device-install-media prepare             카탈로그 해결 후 이미지 다운로드·검증
   sudo ./device-install-media write <옵션>   확인된 제거식 USB에 기록
+  sudo ./device-install-media write-image-macos <옵션>
+                                             전체 디스크 이미지를 macOS에서 기록·검증
 
 USB 기록 옵션은 usb-media/write-usb-linux와 같다. write는 대상 USB를 지우므로
 장치 경로와 시리얼이 들어간 정확한 --confirm 문구가 반드시 필요하다.
+
+macOS 기록 예시:
+  sudo ./device-install-media write-image-macos \
+    --image /absolute/path/device-install.raw \
+    --device /dev/disk5 \
+    --confirm 'ERASE /dev/disk5 SanDisk 3.2Gen1 30784094208'
+
+용량 예시:
+  ./device-install-media capacity
+  ./device-install-media capacity --capacity 16GB
+  ./device-install-media capacity --capacity 16GB \
+    --runtime-artifact dns-appliance=/absolute/path/dns-appliance.iso \
+    --runtime-manifest dns-appliance=/absolute/path/build-manifest.json
 EOF
 }
 
@@ -93,6 +109,11 @@ case "$command" in
     plan)
         show_plan
         ;;
+    capacity|size)
+        shift
+        resolve
+        USB_MEDIA_CATALOG=$resolved exec "$repo_root/usb-media/calculate-capacity" "$@"
+        ;;
     simulate)
         echo "[1/4] 고정된 카탈로그를 확인합니다."
         resolve
@@ -112,6 +133,10 @@ case "$command" in
         shift
         resolve
         USB_MEDIA_CATALOG=$resolved exec "$repo_root/usb-media/write-usb-linux" "$@"
+        ;;
+    write-image-macos)
+        shift
+        exec "$repo_root/usb-media/write-image-macos" "$@"
         ;;
     help|-h|--help)
         usage
