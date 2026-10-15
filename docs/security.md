@@ -3,7 +3,7 @@
 ## Trust boundaries
 
 The public Catalog and vendor download endpoints are external inputs. The
-Builder trusts only an exact Catalog commit after local structural validation,
+Installer trusts only an exact Catalog commit after local structural validation,
 and trusts media only after SHA-256 verification. It never executes Catalog
 scripts.
 
@@ -95,7 +95,7 @@ fingerprint and complete trusted TLS configuration before enabling agent writes.
   reviewed or a pull request was approved.
 - DNS installation writes `public.json`, a sanitized install log, `COMPLETE`,
   and `ACTIVE` to the enrollment partition; the host also retains install facts.
-- The Device Install USB carries the resolved Catalog and checksum manifests,
+- The Gujo Homelab OS USB carries the resolved Catalog and checksum manifests,
   which record media inputs but not operator identity.
 - Cluster bootstrap, Tailscale enrollment, backup collection, reinstall
   authorization, and restore primarily emit console output plus their resulting

@@ -2,7 +2,7 @@
 
 ## Change shape
 
-Keep public media metadata in the Catalog and local policy in the Builder.
+Keep public media metadata in the Catalog and local policy in the Installer.
 Avoid product-name branches in shared media paths. A new entry using an existing
 contract changes data; a new source strategy or profile adapter changes code and
 must have explicit success and rejection coverage.

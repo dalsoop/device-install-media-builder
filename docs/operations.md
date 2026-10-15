@@ -14,10 +14,10 @@ macOS is not the supported host for the USB writer or DNS image build.
 ## Safe planning workflow
 
 ```sh
-./device-install-media available
-./device-install-media plan
-./device-install-media capacity --capacity 16GB
-./device-install-media simulate
+./device-os available
+./device-os plan
+./device-os capacity --capacity 16GB
+./device-os simulate
 ```
 
 These commands may fetch the pinned Catalog Git commit but do not download ISO
@@ -27,7 +27,7 @@ USB labels, and whether the DNS profile is present.
 For an exact DNS-inclusive result, supply the built runtime artifact:
 
 ```sh
-./device-install-media capacity --capacity 16GB \
+./device-os capacity --capacity 16GB \
   --runtime-artifact dns-appliance=/absolute/path/dns-appliance.iso \
   --runtime-manifest dns-appliance=/absolute/path/build-manifest.json
 ```
@@ -44,7 +44,7 @@ the collection and should be reviewed as ordinary source changes.
 On the Linux builder:
 
 ```sh
-./device-install-media prepare
+./device-os prepare
 ```
 
 Preparation resolves the exact Catalog revision, downloads only
@@ -68,14 +68,14 @@ The build must run on amd64 Debian 13. Retain the ISO, build manifest, package
 closure, checksums, and SBOM outside Git. A successful build is not permission
 to write media.
 
-## Write a Device Install USB
+## Write a Gujo Homelab OS USB
 
 Immediately before writing, inspect the attached devices and identify the
 removable target by path and serial. Unplug ambiguous devices. Use absolute
 paths for runtime artifacts.
 
 ```sh
-sudo ./device-install-media write \
+sudo ./device-os write \
   --device /dev/sdX \
   --runtime-artifact dns-appliance=/absolute/path/dns-appliance.iso \
   --runtime-manifest dns-appliance=/absolute/path/build-manifest.json \

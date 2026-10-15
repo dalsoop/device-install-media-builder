@@ -1,10 +1,10 @@
-# Device Install Media Builder
+# Gujo Homelab OS Installer
 
-[![CI](https://github.com/dalsoop/device-install-media-builder/actions/workflows/ci.yml/badge.svg)](https://github.com/dalsoop/device-install-media-builder/actions/workflows/ci.yml)
+[![CI](https://github.com/dalsoop/gujo-homelab-os-installer/actions/workflows/ci.yml/badge.svg)](https://github.com/dalsoop/gujo-homelab-os-installer/actions/workflows/ci.yml)
 
 Build one verified, Korean-first multiboot USB from public operating-system
 metadata and fork-local profiles. The public
-[Device Install Media Catalog](https://github.com/dalsoop/device-install-media-catalog)
+[Gujo Homelab OS Catalog](https://github.com/dalsoop/gujo-homelab-os-catalog)
 supplies official URLs and SHA-256 values. This repository owns selection,
 resolution, downloads, verification, Ventoy layout, physical USB safeguards,
 and local profiles.
@@ -24,13 +24,13 @@ Fork this repository and manage your collection and local profiles in the fork.
 Send reusable public media metadata to the Catalog repository.
 
 ```sh
-git clone https://github.com/<your-account>/device-install-media-builder.git
-cd device-install-media-builder
+git clone https://github.com/<your-account>/gujo-homelab-os-installer.git
+cd gujo-homelab-os-installer
 
-./device-install-media available
-./device-install-media plan
-./device-install-media capacity --capacity 16GB
-./device-install-media simulate
+./device-os available
+./device-os plan
+./device-os capacity --capacity 16GB
+./device-os simulate
 ```
 
 `simulate` resolves the exact Catalog commit and validates the intended media,
@@ -39,14 +39,14 @@ but it does not download ISO files or write a disk.
 On a supported Linux builder, download and verify selected public media:
 
 ```sh
-./device-install-media prepare
+./device-os prepare
 ```
 
 macOS can write a prepared full-disk image with the guarded native writer:
 
 ```sh
-sudo ./device-install-media write-image-macos \
-  --image /absolute/path/device-install.raw \
+sudo ./device-os write-image-macos \
+  --image /absolute/path/device-os.raw \
   --device /dev/diskN \
   --confirm 'ERASE /dev/diskN MEDIA_NAME EXACT_BYTES'
 ```
@@ -61,7 +61,7 @@ After separately building the DNS runtime artifact, re-identify a disposable
 removable device and write it with an exact path-and-serial confirmation:
 
 ```sh
-sudo ./device-install-media write \
+sudo ./device-os write \
   --device /dev/sdX \
   --runtime-artifact dns-appliance=/absolute/path/dns-appliance.iso \
   --runtime-manifest dns-appliance=/absolute/path/build-manifest.json \
@@ -73,12 +73,12 @@ to calculate the exact configured minimum before writing. A 32 GB or larger USB
 is recommended for the default composition.
 
 ```sh
-./device-install-media capacity --capacity 16GB \
+./device-os capacity --capacity 16GB \
   --runtime-artifact dns-appliance=/absolute/path/dns-appliance.iso \
   --runtime-manifest dns-appliance=/absolute/path/build-manifest.json
 
 # Read the capacity of an attached device without writing it.
-./device-install-media capacity --device /dev/disk5
+./device-os capacity --device /dev/disk5
 ```
 
 Without the runtime artifact, the command reports the maximum space still
@@ -90,12 +90,12 @@ remain pending until the artifacts are locally verified.
 ## Customize the USB
 
 ```sh
-./device-install-media include pop-os
-./device-install-media exclude pop-os
-./device-install-media plan
+./device-os include pop-os
+./device-os exclude pop-os
+./device-os plan
 ```
 
-These commands update `collections/device-install.json`. Put private,
+These commands update `collections/device-os.json`. Put private,
 organization-specific, or hardware-specific entries under
 `usb-media/local-entries/` and register them in
 `usb-media/composition.json`.
@@ -106,29 +106,29 @@ To use another Catalog fork, change both its repository URL and exact
 ## Repository split
 
 ```text
-device-install-media-catalog
+gujo-homelab-os-catalog
   public bootloader and OS JSON, official URLs, SHA-256
                          |
                          | exact pinned commit
                          v
-device-install-media-builder fork
+gujo-homelab-os-installer fork
   collection, local profiles, support bundles, media pipeline
                          |
                          v
-                  Device Install USB
+                  Gujo Homelab OS USB
 ```
 
 | Path | Responsibility |
 | --- | --- |
-| `device-install-media` | Human-facing selection, capacity, plan, simulation, preparation, and Linux/macOS write entry points |
+| `device-os` | Human-facing selection, capacity, plan, simulation, preparation, and Linux/macOS write entry points |
 | `usb-media/composition.json` | Catalog pin, USB properties, local profiles, bundles |
-| `collections/device-install.json` | Selected public entries and menu groups |
+| `collections/device-os.json` | Selected public entries and menu groups |
 | `usb-media/local-entries/` | Fork-local runtime artifacts and profiles |
 | `installer/` | Default DNS profile's offline image and destructive gate |
 | `management/` | DNS cluster, Tailscale, desired state, backup, recovery, status |
 
 Adding another entry that uses an existing source kind is data-only. Adding a
-new source kind or profile adapter requires Builder implementation and rejection
+new source kind or profile adapter requires Installer implementation and rejection
 tests; this is not a dynamic plug-in loader.
 
 ## Documentation

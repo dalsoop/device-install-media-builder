@@ -1,4 +1,4 @@
-# Device Install Media Builder
+# Gujo Homelab OS Installer
 
 This fork-oriented repository assembles verified public installation media into
 one multiboot USB. General media composition is the primary product. The guarded
@@ -8,13 +8,13 @@ profile, not the identity of the whole repository.
 ## Project map
 
 ```text
-device-install-media-builder/
+gujo-homelab-os-installer/
 ├── AGENTS.md
 ├── CLAUDE.md
-├── device-install-media
+├── device-os
 ├── collections/
 │   ├── AGENTS.md
-│   └── device-install.json
+│   └── device-os.json
 ├── usb-media/
 │   ├── AGENTS.md
 │   ├── composition.json
@@ -67,7 +67,7 @@ device-install-media-builder/
   require live target identity checks and exact target-specific confirmation;
   zero, removable, installer-media, or ambiguous internal candidates fail closed.
 - Treat the public Catalog as untrusted data: pin one exact commit, execute none
-  of its code, and validate its JSON again in the Builder.
+  of its code, and validate its JSON again in the Installer.
 - General installers remain interactive. DNS unattended installation is limited
   to its local guarded adapter and generation-bound reinstall authorization.
 - Report source, VM, physical-media, firmware, installation, and network

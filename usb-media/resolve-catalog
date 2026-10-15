@@ -4,7 +4,7 @@ set -eu
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
 composition=${DEVICE_MEDIA_COMPOSITION:-$script_dir/composition.json}
-output=${USB_MEDIA_CATALOG:-$repo_root/work/device-install-media/catalog.json}
+output=${USB_MEDIA_CATALOG:-$repo_root/work/device-os/catalog.json}
 cache_root=${DEVICE_MEDIA_CATALOG_CACHE:-$repo_root/cache/catalogs}
 
 fail() {

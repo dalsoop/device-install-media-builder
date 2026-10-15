@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
-catalog=${USB_MEDIA_CATALOG:-$repo_root/work/device-install-media/catalog.json}
+catalog=${USB_MEDIA_CATALOG:-$repo_root/work/device-os/catalog.json}
 cache_dir=${USB_MEDIA_CACHE_DIR:-$repo_root/cache/usb-media}
 target_label=
 target_bytes=
@@ -233,7 +233,7 @@ while [ "$#" -gt 0 ]; do
 done
 
 command -v jq >/dev/null 2>&1 || fail "jq is required"
-[ -r "$catalog" ] || fail "resolved catalog is missing; run ./device-install-media plan"
+[ -r "$catalog" ] || fail "resolved catalog is missing; run ./device-os plan"
 "$script_dir/verify-catalog" "$catalog" >/dev/null
 
 if [ -n "$device" ]; then
@@ -408,7 +408,7 @@ if [ "$json_output" -eq 1 ]; then
     exit 0
 fi
 
-echo "Device Install USB capacity plan"
+echo "Gujo Homelab OS USB capacity plan"
 echo
 jq -r '.entries[] |
   if .bytes == null then

@@ -21,7 +21,7 @@ for file in \
     management/import-enrollment \
     management/collect-backups \
     management/tailscale-enroll \
-    device-install-media \
+    device-os \
     usb-media/fetch-images \
     usb-media/resolve-catalog \
     usb-media/verify-catalog \
@@ -46,7 +46,7 @@ for required in \
     management/tailscale-policy.example.hujson \
     usb-media/composition.json \
     usb-media/local-entries/dns-appliance.json \
-    collections/device-install.json \
+    collections/device-os.json \
     usb-media/guides/pop-os-ko.md \
     docs/tracking/decisions/0002-pinned-declarative-catalog.md \
     management/dns-appliance-status-monitor/config.json \
@@ -76,7 +76,7 @@ python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
 python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
     "$repo_root/usb-media/composition.json"
 python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
-    "$repo_root/collections/device-install.json"
+    "$repo_root/collections/device-os.json"
 python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
     "$repo_root/usb-media/local-entries/dns-appliance.json"
 python3 -c 'import sys; compile(open(sys.argv[1], encoding="utf-8").read(), sys.argv[1], "exec")' \
@@ -86,10 +86,11 @@ python3 -c 'import sys; compile(open(sys.argv[1], encoding="utf-8").read(), sys.
 
 grep -q 'runtime-artifact' "$repo_root/README.md"
 grep -q 'locked-download' "$repo_root/usb-media/README.md"
-grep -q 'device-install-media-catalog' "$repo_root/usb-media/composition.json"
+grep -q 'gujo-homelab-os-catalog' "$repo_root/usb-media/composition.json"
 
-if grep -R -i -E 'dns-appliance-provisioning|superusb|homelab-usb|homelab-bootstrap-media|Homelab Bootstrap|homelab-provisioning|Homelab Install & Recovery' \
-    "$repo_root" --exclude-dir=.git --exclude=repository-contract.sh; then
+if git -C "$repo_root" grep -I -n -i -E \
+    'dns-appliance-provisioning|device-install-media|device-os-flasher|device-os-catalog|superusb|homelab-usb|homelab-bootstrap-media|Homelab Bootstrap|homelab-provisioning|Homelab Install & Recovery' \
+    -- . ':!tests/repository-contract.sh'; then
     echo "repository-contract: obsolete project name remains" >&2
     exit 1
 fi

@@ -17,11 +17,11 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y shellcheck jq
       - name: Check shell syntax
         run: |
-          find device-install-media installer management usb-media tests build -type f -perm -u+x -print0 |
+          find device-os installer management usb-media tests build -type f -perm -u+x -print0 |
             xargs -0 -n1 bash -n
       - name: ShellCheck
         run: |
-          find device-install-media installer management usb-media tests build -type f -perm -u+x -print0 |
+          find device-os installer management usb-media tests build -type f -perm -u+x -print0 |
             xargs -0 shellcheck
       - name: Check Python syntax
         run: |

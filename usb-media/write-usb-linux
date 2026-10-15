@@ -3,7 +3,7 @@ set -euo pipefail
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
-catalog=${USB_MEDIA_CATALOG:-$repo_root/work/device-install-media/catalog.json}
+catalog=${USB_MEDIA_CATALOG:-$repo_root/work/device-os/catalog.json}
 cache_dir=${USB_MEDIA_CACHE_DIR:-$repo_root/cache/usb-media}
 device=
 confirmation=
@@ -77,7 +77,7 @@ fi
 for command in lsblk findmnt jq sha256sum python3 sfdisk blockdev udevadm mkfs.exfat; do
     command -v "$command" >/dev/null 2>&1 || fail "$command is required"
 done
-[ -r "$catalog" ] || fail "resolved catalog is missing; run ./device-install-media plan"
+[ -r "$catalog" ] || fail "resolved catalog is missing; run ./device-os plan"
 "$script_dir/verify-catalog" "$catalog" >/dev/null
 
 [ -b "$device" ] || usage

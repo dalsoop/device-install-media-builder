@@ -4,13 +4,13 @@
 
 The repository has two products with a shared safety model:
 
-1. a fork-oriented multiboot media builder; and
+1. a fork-oriented multiboot OS flasher; and
 2. a local DNS-appliance profile that demonstrates guarded unattended
    installation and post-install management.
 
-The public Device Install Media Catalog is an external, data-only dependency.
-The Builder pins one exact Catalog commit, selects entries, adds fork-local
-entries and bundles, and produces a resolved plan. The Builder never executes
+The public Gujo Homelab OS Catalog is an external, data-only dependency.
+The Installer pins one exact Catalog commit, selects entries, adds fork-local
+entries and bundles, and produces a resolved plan. The Installer never executes
 Catalog code.
 
 Ongoing DNS host configuration and long-lived secrets are outside this
@@ -32,7 +32,7 @@ usb-media/resolve-catalog <--- collections/ + local-entries/
         fetch    Ventoy    USB writer
                              |
                              v
-                    Device Install USB
+                    Gujo Homelab OS USB
 
 DNS runtime artifact
 installer/ --> guarded ISO --> USB local entry
@@ -45,7 +45,7 @@ installer/ --> guarded ISO --> USB local entry
 ```
 
 Dependencies point from orchestration toward data and specialized modules.
-Catalog data does not depend on the Builder. General media entries do not
+Catalog data does not depend on the Installer. General media entries do not
 depend on the DNS profile. Management commands operate after installation and
 do not become an appliance boot dependency.
 
@@ -53,9 +53,9 @@ do not become an appliance boot dependency.
 
 `usb-media/composition.json` pins the Catalog repository, 40-character
 revision, index, bootloader, local entries, USB labels, reserve sizes, and
-bundles. `collections/device-install.json` selects public entry IDs and defines
+bundles. `collections/device-os.json` selects public entry IDs and defines
 menu groups. The resolver copies only referenced JSON, validates paths and IDs,
-and emits `work/device-install-media/catalog.json`.
+and emits `work/device-os/catalog.json`.
 
 The resolved plan is the single input for download, checksum verification,
 Ventoy menu generation, capacity calculation, and USB staging. Existing
@@ -68,7 +68,7 @@ strategies are:
 
 This is data polymorphism within implemented strategies, not a dynamic plug-in
 system. A new entry using an existing strategy requires data only. A new
-strategy or profile adapter requires Builder code and rejection coverage.
+strategy or profile adapter requires Installer code and rejection coverage.
 
 ## DNS installation planes
 

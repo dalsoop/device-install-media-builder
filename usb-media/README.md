@@ -1,4 +1,4 @@
-# Device Install USB
+# Gujo Homelab OS USB
 
 This module combines public Catalog entries with fork-local entries into a
 verified Korean-first Ventoy USB.
@@ -6,13 +6,13 @@ verified Korean-first Ventoy USB.
 ## Human workflow
 
 ```sh
-./device-install-media available
-./device-install-media include pop-os
-./device-install-media exclude pop-os
-./device-install-media capacity --capacity 16GB
-./device-install-media simulate
-./device-install-media prepare
-sudo ./device-install-media write --device /dev/sdX ...
+./device-os available
+./device-os include pop-os
+./device-os exclude pop-os
+./device-os capacity --capacity 16GB
+./device-os simulate
+./device-os prepare
+sudo ./device-os write --device /dev/sdX ...
 ```
 
 `available`, `plan`, `capacity`, and `simulate` do not write a block device.
@@ -22,8 +22,8 @@ partitions and overwrites the confirmed removable target.
 On macOS, a prepared full-disk image can be written and read back with:
 
 ```sh
-sudo ./device-install-media write-image-macos \
-  --image /absolute/path/device-install.raw \
+sudo ./device-os write-image-macos \
+  --image /absolute/path/device-os.raw \
   --device /dev/diskN \
   --confirm 'ERASE /dev/diskN MEDIA_NAME EXACT_BYTES'
 ```
@@ -46,13 +46,13 @@ fixed reserve and overhead already prove the target is too small.
 | Input | Ownership |
 | --- | --- |
 | `composition.json` | Catalog URL and commit, USB properties, local entries, bundles |
-| `../collections/device-install.json` | Selected public IDs and menu groups |
+| `../collections/device-os.json` | Selected public IDs and menu groups |
 | `local-entries/*.json` | Fork-local profiles such as the DNS installer |
 | External Catalog | Public bootloader and OS metadata |
 
 The resolver fetches one exact Catalog commit but does not execute its scripts.
 It validates paths and contracts again, then writes the shared resolved plan to
-`work/device-install-media/catalog.json`.
+`work/device-os/catalog.json`.
 
 ## Supported strategies
 
@@ -60,12 +60,12 @@ It validates paths and contracts again, then writes the shared resolved plan to
 | --- | --- | --- | --- |
 | `locked-download` | HTTPS URL | Catalog SHA-256 | Verified cache file |
 | `runtime-artifact` | Caller-supplied file | Build-manifest digest | Verified artifact |
-| `repository-file` | None | Builder path contract | Single support file |
-| `repository-tree` | None | Builder path contract | Support directory |
+| `repository-file` | None | Installer path contract | Single support file |
+| `repository-tree` | None | Installer path contract | Support directory |
 
 A new public image using `locked-download` needs Catalog data and collection
 selection only. A new strategy or profile adapter requires implementation and
-tests in the Builder.
+tests in the Installer.
 
 ## Safety boundary
 

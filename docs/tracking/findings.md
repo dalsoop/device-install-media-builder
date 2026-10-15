@@ -3,7 +3,7 @@
 ## Physical qualification is incomplete
 
 The repository has simulations and source contracts, but no recorded end-to-end
-physical Device Install USB qualification on the target HP hardware. This
+physical Gujo Homelab OS USB qualification on the target HP hardware. This
 cannot be closed in source alone because firmware, removable-media behavior,
 disk identity, Secure Boot, and power-loss behavior require disposable media
 and controlled physical access.
@@ -27,7 +27,7 @@ command until an immutable plan artifact and approval source are designed.
 ## Catalog schema files and executable validation can drift
 
 The Catalog repository publishes JSON Schemas, while its executable verifier is
-the actual CI gate. The Builder reimplements the consumed subset. Coordinated
+the actual CI gate. The Installer reimplements the consumed subset. Coordinated
 contract checks reduce but do not eliminate drift between those three surfaces.
 A future change should either generate one representation from another or add
 cross-repository contract fixtures before expanding schema versions.
