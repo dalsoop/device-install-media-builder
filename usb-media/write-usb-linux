@@ -3,8 +3,8 @@ set -euo pipefail
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
-catalog=${HOMELAB_MEDIA_CATALOG:-$script_dir/catalog.json}
-cache_dir=${HOMELAB_USB_CACHE_DIR:-$repo_root/cache/homelab-usb}
+catalog=${USB_MEDIA_CATALOG:-$script_dir/catalog.json}
+cache_dir=${USB_MEDIA_CACHE_DIR:-$repo_root/cache/usb-media}
 device=
 confirmation=
 legacy_dns_iso=
@@ -28,7 +28,7 @@ EOF
 }
 
 fail() {
-    echo "homelab-usb write-usb-linux: $*" >&2
+    echo "usb-media write-usb-linux: $*" >&2
     exit 1
 }
 
@@ -101,7 +101,7 @@ bootloader_filename=$(jq -er '.bootloader.source.filename' "$catalog")
 bootloader_sha256=$(jq -er '.bootloader.source.sha256' "$catalog")
 bootloader_root=$(jq -er '.bootloader.archive_root' "$catalog")
 bootloader_file=$cache_dir/$bootloader_filename
-[ -s "$bootloader_file" ] || fail "missing $bootloader_file; run homelab-usb/fetch-images"
+[ -s "$bootloader_file" ] || fail "missing $bootloader_file; run usb-media/fetch-images"
 printf '%s  %s\n' "$bootloader_sha256" "$bootloader_file" | sha256sum -c - >/dev/null ||
     fail "bootloader checksum mismatch"
 
@@ -116,7 +116,7 @@ while IFS= read -r entry; do
             filename=$(jq -er '.source.filename' <<<"$entry")
             expected=$(jq -er '.source.sha256' <<<"$entry")
             source_file=$cache_dir/$filename
-            [ -s "$source_file" ] || fail "missing $source_file; run homelab-usb/fetch-images"
+            [ -s "$source_file" ] || fail "missing $source_file; run usb-media/fetch-images"
             printf '%s  %s\n' "$expected" "$source_file" | sha256sum -c - >/dev/null ||
                 fail "checksum mismatch for $id"
             ;;
@@ -169,7 +169,7 @@ while read -r partition; do
     fi
 done < <(lsblk -nrpo NAME,TYPE "$device" | awk '$2 == "part" { print $1 }')
 
-temporary=$(mktemp -d /tmp/homelab-usb.XXXXXX)
+temporary=$(mktemp -d /tmp/usb-media.XXXXXX)
 mount_dir=$temporary/mount
 enroll_dir=$temporary/enroll
 cleanup() {
@@ -251,7 +251,7 @@ python3 -c 'import json,sys; json.load(open(sys.argv[1], encoding="utf-8"))' \
     "$mount_dir/ventoy/ventoy.json"
 
 {
-    echo "HOMELAB BOOTSTRAP USB / 홈랩 부트스트랩 USB"
+    echo "HOMELAB INSTALL & RECOVERY USB / 홈랩 설치·복구 USB"
     echo
     jq -r '.entries[] | "- \(.menu_alias): \(.description_ko)"' "$catalog"
     echo
@@ -259,7 +259,7 @@ python3 -c 'import json,sys; json.load(open(sys.argv[1], encoding="utf-8"))' \
     echo "DNS 등록 결과는 DNS-ENROLL 파티션에만 기록된다. Ventoy 언어는 L 키로 바꾼다."
 } > "$mount_dir/README_KO.txt"
 {
-    echo "HOMELAB BOOTSTRAP USB"
+    echo "HOMELAB INSTALL & RECOVERY USB"
     echo
     jq -r '.entries[] | "- \(.menu_alias): \(.description_en)"' "$catalog"
     echo
@@ -276,5 +276,5 @@ jq '{schema_version:1,build_id:.build_id,image_sha256:.iso_sha256,debian_point_r
 sync -f "$enroll_dir"
 umount "$enroll_dir"
 
-echo "homelab-usb write-usb-linux: verified catalog and created $data_label plus $enrollment_label"
-echo "homelab-usb write-usb-linux: target remains $device; eject it before unplugging"
+echo "usb-media write-usb-linux: verified catalog and created $data_label plus $enrollment_label"
+echo "usb-media write-usb-linux: target remains $device; eject it before unplugging"

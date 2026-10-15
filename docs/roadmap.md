@@ -56,7 +56,7 @@ physical operation; release remains blocked by `docs/verification.md`.
 - [ ] Complete cluster, backup/restore, primary-loss, and DHCP rollback drills.
 - [ ] Publish a tagged installer only after the physical gates pass.
 
-## Phase 6: Homelab Bootstrap USB
+## Phase 6: Homelab Install & Recovery USB
 
 - [x] Define a polymorphic media catalog for pinned downloads, runtime
   artifacts, repository bundles, menu metadata, and isolated profile adapters.

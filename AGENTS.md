@@ -1,4 +1,4 @@
-# Homelab Bootstrap Media
+# Homelab Provisioning
 
 This repository owns guarded homelab installation media and the reproducible,
 offline bootstrap of the three bare-metal DNS appliances `dns01`, `dns02`, and
@@ -21,7 +21,7 @@ offline bootstrap of the three bare-metal DNS appliances `dns01`, `dns02`, and
   install.
 - Agents receive read-only access by default. DNS writes require a reviewed
   desired-state change, a machine-readable plan, and an explicit apply gate.
-- `homelab-usb/catalog.json` is the media composition SSOT. Add products through
+- `usb-media/catalog.json` is the media composition SSOT. Add products through
   an existing source contract when possible; new source kinds must implement
   fetch, verify, and stage behavior plus rejection tests. Product exceptions
   belong in isolated profile adapters and must not weaken shared safety gates.

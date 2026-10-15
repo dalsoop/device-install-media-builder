@@ -13,7 +13,7 @@ misleading because the implementation remains DNS-shaped.
 
 ## Decision
 
-`homelab-usb/catalog.json` is the single source of truth for media entries,
+`usb-media/catalog.json` is the single source of truth for media entries,
 groups, USB properties, bundles, and the bootloader. Every boot entry implements
 the same identity, destination, menu, behavior, profile, and source contract.
 

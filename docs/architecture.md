@@ -52,7 +52,7 @@ Tailscale SSH by default. Normal OpenSSH remains the recovery surface.
 
 ### Utility media plane
 
-`homelab-usb/catalog.json` declares a Korean-first Ventoy menu containing the
+`usb-media/catalog.json` declares a Korean-first Ventoy menu containing the
 guarded DNS appliance ISO, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE,
 Pop!_OS, and Debian Live. The fetcher, verifier, menu renderer, and writer
 consume the same catalog instead of embedding product branches independently.

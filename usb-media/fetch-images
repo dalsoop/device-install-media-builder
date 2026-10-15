@@ -3,11 +3,11 @@ set -eu
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
-catalog=${HOMELAB_MEDIA_CATALOG:-$script_dir/catalog.json}
-cache_dir=${HOMELAB_USB_CACHE_DIR:-$repo_root/cache/homelab-usb}
+catalog=${USB_MEDIA_CATALOG:-$script_dir/catalog.json}
+cache_dir=${USB_MEDIA_CACHE_DIR:-$repo_root/cache/usb-media}
 
 fail() {
-    echo "homelab-usb fetch-images: $*" >&2
+    echo "usb-media fetch-images: $*" >&2
     exit 1
 }
 
@@ -53,4 +53,4 @@ while IFS="$tab" read -r filename url sha256; do
     fetch "$filename" "$url" "$sha256"
 done < "$source_list"
 
-echo "homelab-usb fetch-images: verified catalog cache at $cache_dir"
+echo "usb-media fetch-images: verified catalog cache at $cache_dir"

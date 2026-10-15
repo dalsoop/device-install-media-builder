@@ -1,8 +1,8 @@
 {
   "schema_version": 1,
   "product": {
-    "name": "Homelab Bootstrap USB",
-    "repository": "https://github.com/dalsoop/homelab-bootstrap-media"
+    "name": "Homelab Install & Recovery USB",
+    "repository": "https://github.com/dalsoop/homelab-provisioning"
   },
   "usb": {
     "data_label": "HOMELAB-USB",
@@ -136,7 +136,7 @@
     {
       "id": "pop-os-korean-guide",
       "destination": "guides/POP_OS_KO.md",
-      "source": { "kind": "repository-file", "path": "homelab-usb/guides/pop-os-ko.md" }
+      "source": { "kind": "repository-file", "path": "usb-media/guides/pop-os-ko.md" }
     },
     {
       "id": "dns-appliance-status-monitor",
