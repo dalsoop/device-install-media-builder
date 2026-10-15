@@ -164,6 +164,10 @@ root=$(make_fixture installer-media)
 printf '/dev/sda /cdrom iso9660 ro 0 0\n' > "$root/mounts"
 expect_failure installer_media_is_never_targeted "$root"
 
+root=$(make_fixture ventoy-mapper-media)
+printf '/dev/mapper/Ventoy /cdrom iso9660 ro 0 0\n' > "$root/mounts"
+expect_success ventoy_mapper_media_keeps_exact_target_selection "$root"
+
 root=$(make_fixture duplicate-mac)
 mkdir -p "$root/sys/class/net/en1"
 printf '00:11:22:33:44:55\n' > "$root/sys/class/net/en1/address"
@@ -196,4 +200,4 @@ authorize_erase=true
 EOF
 expect_failure stale_reinstall_token_is_blocked "$root"
 
-printf 'RESULT 12/12 install-gate simulations passed\n'
+printf 'RESULT 13/13 install-gate simulations passed\n'

@@ -12,8 +12,10 @@ Technitium DNS appliances.
 | `dns02` | `10.0.5.2/16` | Secondary cluster node |
 | `dns03` | `10.0.5.3/16` | Secondary cluster node |
 
-All three nodes run Debian 13, Technitium DNS Server, OpenSSH, and Cockpit. The
-installation must remain functional without Internet access.
+All three nodes run Debian 13, Technitium DNS Server, OpenSSH, Cockpit, and a
+checksum-pinned Tailscale client. The installation must remain functional
+without Internet access; Tailscale enrollment happens later when Internet is
+available.
 
 ## Current status
 
@@ -21,14 +23,16 @@ The repository contains source for the complete day-0 path: a snapshot-pinned
 Debian 13.7 Simple-CDD profile, exact-hardware erase gates, a digest-pinned
 Technitium 15.6.1 OCI image, retry-safe first boot, generated Cockpit and
 Technitium credentials, encrypted `DNS-ENROLL` writeback, health and backup
-timers, cluster bootstrap, and Git-gated zone plan/apply tooling.
+timers, cluster bootstrap, one-off Tailscale enrollment, and Git-gated zone
+plan/apply tooling. `superusb/` defines a separate Ventoy utility USB containing
+the DNS installer, Proxmox, TrueNAS, and Debian Live with pinned checksums.
 
 It deliberately contains no generated ISO, real HP inventory, password, token,
 private key, or recovery archive. Destructive installation remains disabled
 until each machine is captured into ignored `inventory/local/` files and a
 physical `dns01` pilot is approved.
 
-The isolated simulations cover 12 installer cases plus 4 management safety
+The isolated simulations cover 13 installer cases plus 4 management safety
 cases, including completed-role and stale reinstall-token rejection. This
 proves scripted decisions only. A booted ISO, Debian installation, Secure Boot,
 internal-disk reboot, USB writeback, and physical DNS service remain
@@ -49,4 +53,5 @@ completed.
 
 Start with [the architecture](docs/architecture.md), [security rules](docs/security.md),
 [the OS installer guide](docs/os-install.md), [network cutover](docs/network-cutover.md),
-[recovery](docs/recovery.md), and [verification gates](docs/verification.md).
+[recovery](docs/recovery.md), [SUPERUSB](superusb/README.md), and
+[verification gates](docs/verification.md).

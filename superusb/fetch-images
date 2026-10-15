@@ -1,0 +1,43 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
+# shellcheck disable=SC1091
+. "$script_dir/locks.env"
+cache_dir=${SUPERUSB_CACHE_DIR:-$repo_root/cache/superusb}
+
+fail() {
+    echo "superusb fetch-images: $*" >&2
+    exit 1
+}
+
+command -v curl >/dev/null 2>&1 || fail "curl is required"
+command -v sha256sum >/dev/null 2>&1 || fail "sha256sum is required"
+"$script_dir/verify-locks" >/dev/null
+mkdir -p "$cache_dir"
+
+fetch() {
+    filename=$1
+    url=$2
+    expected=$3
+    destination=$cache_dir/$filename
+    if [ ! -s "$destination" ]; then
+        partial=$destination.partial
+        rm -f "$partial"
+        trap 'rm -f "$partial"' EXIT HUP INT TERM
+        curl --fail --location --proto '=https' --tlsv1.2 \
+            --output "$partial" "$url"
+        printf '%s  %s\n' "$expected" "$partial" | sha256sum -c -
+        mv "$partial" "$destination"
+        trap - EXIT HUP INT TERM
+    fi
+    printf '%s  %s\n' "$expected" "$destination" | sha256sum -c -
+}
+
+fetch "ventoy-$VENTOY_VERSION-linux.tar.gz" "$VENTOY_LINUX_URL" "$VENTOY_LINUX_SHA256"
+fetch "debian-live-$DEBIAN_LIVE_VERSION-amd64-standard.iso" "$DEBIAN_LIVE_URL" "$DEBIAN_LIVE_SHA256"
+fetch "proxmox-ve_$PROXMOX_VE_VERSION.iso" "$PROXMOX_VE_URL" "$PROXMOX_VE_SHA256"
+fetch "TrueNAS-SCALE-$TRUENAS_VERSION.iso" "$TRUENAS_URL" "$TRUENAS_SHA256"
+
+echo "superusb fetch-images: verified cache at $cache_dir"

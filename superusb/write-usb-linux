@@ -1,0 +1,158 @@
+#!/bin/bash
+set -euo pipefail
+
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
+# shellcheck disable=SC1091
+. "$script_dir/locks.env"
+cache_dir=${SUPERUSB_CACHE_DIR:-$repo_root/cache/superusb}
+reserve_mib=2048
+device=
+dns_iso=
+dns_manifest=
+confirmation=
+
+usage() {
+    echo "usage: sudo $0 --device /dev/sdX --dns-iso image.iso --dns-manifest build-manifest.json --confirm 'ERASE /dev/sdX SERIAL'" >&2
+    exit 2
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --device) device=${2:-}; shift 2 ;;
+        --dns-iso) dns_iso=${2:-}; shift 2 ;;
+        --dns-manifest) dns_manifest=${2:-}; shift 2 ;;
+        --confirm) confirmation=${2:-}; shift 2 ;;
+        *) usage ;;
+    esac
+done
+
+fail() {
+    echo "superusb write-usb-linux: $*" >&2
+    exit 1
+}
+
+[ "$(uname -s)" = Linux ] || fail "Linux is required"
+[ "$(id -u)" -eq 0 ] || fail "run as root"
+[ -b "$device" ] || usage
+[ "$(lsblk -dnro TYPE "$device")" = disk ] || fail "whole-disk target required"
+[ "$(lsblk -dnro RM "$device")" = 1 ] || fail "target is not reported removable"
+[ -r "$dns_iso" ] && [ -r "$dns_manifest" ] || usage
+
+root_source=$(findmnt -nro SOURCE /)
+root_parent=/dev/$(lsblk -no PKNAME "$root_source" 2>/dev/null | sed -n '1p')
+[ "$device" != "$root_parent" ] || fail "refusing root disk"
+serial=$(lsblk -dnro SERIAL "$device" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+model=$(lsblk -dnro MODEL "$device" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
+[ -n "$serial" ] || fail "target has no readable serial"
+[ -n "$model" ] || fail "target has no readable model"
+[ "$confirmation" = "ERASE $device $serial" ] ||
+    fail "exact confirmation must include device and serial: ERASE $device $serial"
+
+"$script_dir/verify-locks" >/dev/null
+declare -a locked_files=(
+    "$cache_dir/ventoy-$VENTOY_VERSION-linux.tar.gz"
+    "$cache_dir/debian-live-$DEBIAN_LIVE_VERSION-amd64-standard.iso"
+    "$cache_dir/proxmox-ve_$PROXMOX_VE_VERSION.iso"
+    "$cache_dir/TrueNAS-SCALE-$TRUENAS_VERSION.iso"
+)
+for file in "${locked_files[@]}"; do
+    [ -s "$file" ] || fail "missing $file; run superusb/fetch-images"
+done
+printf '%s  %s\n' "$VENTOY_LINUX_SHA256" "${locked_files[0]}" | sha256sum -c - >/dev/null
+printf '%s  %s\n' "$DEBIAN_LIVE_SHA256" "${locked_files[1]}" | sha256sum -c - >/dev/null
+printf '%s  %s\n' "$PROXMOX_VE_SHA256" "${locked_files[2]}" | sha256sum -c - >/dev/null
+printf '%s  %s\n' "$TRUENAS_SHA256" "${locked_files[3]}" | sha256sum -c - >/dev/null
+
+expected_dns_sha=$(jq -er '.iso_sha256 | select(test("^[a-f0-9]{64}$"))' "$dns_manifest")
+actual_dns_sha=$(sha256sum "$dns_iso" | awk '{print $1}')
+[ "$actual_dns_sha" = "$expected_dns_sha" ] || fail "DNS installer checksum mismatch"
+
+required_bytes=$(stat -c %s "$dns_iso")
+for file in "${locked_files[@]:1}"; do
+    required_bytes=$((required_bytes + $(stat -c %s "$file")))
+done
+required_bytes=$((required_bytes + reserve_mib * 1024 * 1024 + 768 * 1024 * 1024))
+device_bytes=$(blockdev --getsize64 "$device")
+[ "$device_bytes" -gt "$required_bytes" ] ||
+    fail "USB is too small; need more than $required_bytes bytes"
+
+echo "target: $device"
+echo "model: $model"
+echo "serial: $serial"
+echo "bytes: $device_bytes"
+echo "warning: all existing partitions and data will be erased"
+
+while read -r partition; do
+    [ -n "$partition" ] && umount "$partition" 2>/dev/null || true
+done < <(lsblk -nrpo NAME,TYPE "$device" | awk '$2 == "part" { print $1 }')
+
+temporary=$(mktemp -d /tmp/superusb.XXXXXX)
+mount_dir=$temporary/mount
+enroll_dir=$temporary/enroll
+cleanup() {
+    mountpoint -q "$mount_dir" 2>/dev/null && umount "$mount_dir" || true
+    mountpoint -q "$enroll_dir" 2>/dev/null && umount "$enroll_dir" || true
+    rm -rf "$temporary"
+}
+trap cleanup EXIT HUP INT TERM
+
+tar -xzf "${locked_files[0]}" -C "$temporary"
+ventoy_dir=$temporary/ventoy-$VENTOY_VERSION
+[ -x "$ventoy_dir/Ventoy2Disk.sh" ] || fail "Ventoy archive layout is unexpected"
+printf 'y\ny\n' | "$ventoy_dir/Ventoy2Disk.sh" -I -r "$reserve_mib" -L SUPERUSB "$device"
+blockdev --rereadpt "$device" || true
+udevadm settle
+
+main_partition=$(lsblk -nrpo NAME,LABEL "$device" | awk '$2 == "SUPERUSB" { print $1; exit }')
+[ -b "$main_partition" ] || fail "Ventoy data partition was not found"
+
+sector_size=$(blockdev --getss "$device")
+last_sector=$(sfdisk -J "$device" | jq '[.partitiontable.partitions[] | .start + .size] | max')
+start=$(((last_sector + 2047) / 2048 * 2048))
+total_sectors=$((device_bytes / sector_size))
+[ $((total_sectors - start)) -gt 131072 ] || fail "reserved enrollment space was not created"
+printf 'start=%s, type=7\n' "$start" | sfdisk --append "$device"
+blockdev --rereadpt "$device"
+udevadm settle
+enroll_partition=$(lsblk -nrpo NAME,TYPE,START "$device" |
+    awk -v start="$start" '$2 == "part" && $3 == start { print $1; exit }')
+[ -b "$enroll_partition" ] || fail "DNS-ENROLL partition was not found"
+mkfs.exfat -n DNS-ENROLL "$enroll_partition"
+
+mkdir -p "$mount_dir" "$enroll_dir"
+mount "$main_partition" "$mount_dir"
+install -d -m 0755 "$mount_dir/images/01-dns" "$mount_dir/images/02-virtualization" \
+    "$mount_dir/images/03-storage" "$mount_dir/images/90-tools" "$mount_dir/manifests"
+install -m 0644 "$dns_iso" "$mount_dir/images/01-dns/dns-appliance-installer.iso"
+install -m 0644 "${locked_files[2]}" "$mount_dir/images/02-virtualization/proxmox-ve-$PROXMOX_VE_VERSION.iso"
+install -m 0644 "${locked_files[3]}" "$mount_dir/images/03-storage/truenas-$TRUENAS_VERSION.iso"
+install -m 0644 "${locked_files[1]}" "$mount_dir/images/90-tools/debian-live-$DEBIAN_LIVE_VERSION.iso"
+install -m 0644 "$dns_manifest" "$mount_dir/manifests/dns-build-manifest.json"
+(
+    cd "$mount_dir"
+    find images -type f -name '*.iso' -exec sha256sum {} + | LC_ALL=C sort > manifests/SHA256SUMS
+)
+cat > "$mount_dir/README.txt" <<EOF
+SUPERUSB $VENTOY_VERSION
+
+01-dns: guarded DNS appliance installer; exact HP inventory match required.
+02-virtualization: Proxmox VE $PROXMOX_VE_VERSION; interactive and destructive.
+03-storage: TrueNAS $TRUENAS_VERSION; interactive and destructive.
+90-tools: Debian Live $DEBIAN_LIVE_VERSION for inventory and recovery.
+
+No installer has an automatic menu timeout. Verify the destination disk inside
+each installer. DNS enrollment results are written only to DNS-ENROLL.
+EOF
+sync -f "$mount_dir"
+umount "$mount_dir"
+
+mount -o nodev,nosuid,noexec,umask=0077 "$enroll_partition" "$enroll_dir"
+install -d -m 0700 "$enroll_dir/records" "$enroll_dir/reinstall"
+jq '{schema_version:1,build_id:.build_id,image_sha256:.iso_sha256,debian_point_release,technitium_version,technitium_image_digest,tailscale_version,tailscale_archive_sha256}' \
+    "$dns_manifest" > "$enroll_dir/installer.json"
+sync -f "$enroll_dir"
+umount "$enroll_dir"
+
+echo "superusb write-usb-linux: verified sources and created SUPERUSB plus DNS-ENROLL"
+echo "superusb write-usb-linux: target remains $device; eject it before unplugging"

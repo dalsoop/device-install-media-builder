@@ -31,10 +31,14 @@ physical operation; release remains blocked by `docs/verification.md`.
 ## Phase 3: service and cluster configuration
 
 - [x] Install digest-pinned Technitium, Cockpit, SSH, firewall, metrics, and NTP.
+- [x] Install a checksum-pinned Tailscale client offline and provide one-off,
+  tagged management-host enrollment without embedding credentials.
 - [x] Provide cluster initialization/join and catalog-backed `home.arpa` import.
 - [x] Create separate read, plan, and apply API identities.
 - [x] Add encrypted backup collection and explicit restore tooling.
 - [ ] Move ongoing update policy to `host-infra` and run a rollback drill.
+- [ ] Apply and review the tailnet policy, create the scoped OAuth credential,
+  and complete a three-node enrollment/reboot drill.
 
 ## Phase 4: agent management plane
 
@@ -51,3 +55,13 @@ physical operation; release remains blocked by `docs/verification.md`.
 - [ ] Pilot `dns01`, then install `dns02` and `dns03` one at a time.
 - [ ] Complete cluster, backup/restore, primary-loss, and DHCP rollback drills.
 - [ ] Publish a tagged installer only after the physical gates pass.
+
+## Phase 6: SUPERUSB utility media
+
+- [x] Pin Ventoy, Debian Live, Proxmox VE, and TrueNAS downloads and checksums.
+- [x] Add a serial-bound Linux writer that creates `SUPERUSB` and a separate
+  `DNS-ENROLL` partition.
+- [ ] Build the DNS ISO, assemble the physical utility USB, and verify all
+  copied checksums.
+- [ ] Test the exact HP legacy BIOS, UEFI, Secure Boot, mapper-device exclusion,
+  and USB-left-in paths before relying on the media.

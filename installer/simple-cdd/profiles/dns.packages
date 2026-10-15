@@ -6,6 +6,7 @@ curl
 dnsutils
 exfatprogs
 jq
+kmod
 nftables
 openssh-server
 openssl
