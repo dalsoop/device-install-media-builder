@@ -17,6 +17,23 @@ Ongoing DNS host configuration and long-lived secrets are outside this
 repository. The repository owns Day-0 media, first boot, enrollment, portable
 verification tools, and explicit management commands.
 
+## Planned World Playbook boundary
+
+The user-owned Gujo Homelab World Playbook is the planned source of environment
+intent. It will select Catalog entries, bind installation intent to the user's
+devices, and provide policy to this Installer without moving Installer behavior
+or long-lived secrets into the Playbook.
+
+Its history is organized by verified USB creation, not by the first draft or
+latest edit of an environment. Each successful physical USB write publishes a
+new immutable generation named `{YYYYMMDDHHmmss}-{world-slug}`. Generations are
+append-only, including repeated writes from identical desired state. See
+[`world-playbook.md`](world-playbook.md) and decision
+[`0006`](tracking/decisions/0006-append-only-world-generations.md).
+
+This boundary is documented but not implemented. The current repository still
+owns `usb-media/composition.json` and `collections/device-os.json` directly.
+
 ## Components and dependency direction
 
 ```text
