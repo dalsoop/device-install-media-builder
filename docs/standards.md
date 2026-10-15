@@ -2,10 +2,13 @@
 
 ## Change shape
 
-Keep public media metadata in the Catalog and local policy in the Installer.
-Avoid product-name branches in shared media paths. A new entry using an existing
-contract changes data; a new source strategy or profile adapter changes code and
-must have explicit success and rejection coverage.
+Keep public media metadata in the Catalog, shared execution behavior in the
+Installer, and user-owned selection and policy in the World Playbook. The
+current Installer-local composition remains a reference surface until external
+World input is implemented. Avoid product-name branches in shared media paths.
+A new entry using an existing contract changes data; a new source strategy or
+profile adapter changes code and must have explicit success and rejection
+coverage.
 
 Shell entry points use `set -eu` or `set -euo pipefail` as appropriate,
 resolve paths from their own location, quote expansions, use temporary files for
@@ -18,7 +21,8 @@ relative paths are validated before they become filesystem paths.
 
 ## Repository layout
 
-- `collections/` contains user choice, not vendor metadata.
+- `collections/` contains the current reference selection, not vendor metadata;
+  the final user choice belongs in the World Playbook.
 - `usb-media/` owns the resolved media plan and physical USB assembly.
 - `installer/` owns only the DNS Day-0 image and first-boot behavior.
 - `management/` owns post-install orchestration from a trusted host.

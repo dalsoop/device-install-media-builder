@@ -2,16 +2,17 @@
 
 ## System boundary
 
-The repository has two products with a shared safety model:
+The repository implements two engine surfaces with a shared safety model:
 
-1. a fork-oriented multiboot OS flasher; and
+1. a reusable multiboot OS installer; and
 2. a local DNS-appliance profile that demonstrates guarded unattended
    installation and post-install management.
 
-The public Gujo Homelab OS Catalog is an external, data-only dependency.
-The Installer pins one exact Catalog commit, selects entries, adds fork-local
-entries and bundles, and produces a resolved plan. The Installer never executes
-Catalog code.
+The public Gujo Homelab OS Catalog is an external, data-only dependency. The
+user-owned Gujo Homelab World Playbook is the planned external source of media
+selection and environment intent. The Installer pins one exact Catalog commit,
+resolves selected entries plus local inputs, and produces a plan. The Installer
+never executes Catalog code.
 
 Ongoing DNS host configuration and long-lived secrets are outside this
 repository. The repository owns Day-0 media, first boot, enrollment, portable
@@ -19,7 +20,9 @@ verification tools, and explicit management commands.
 
 ## Planned World Playbook boundary
 
-The user-owned Gujo Homelab World Playbook is the planned source of environment
+The user-owned
+[Gujo Homelab World Playbook](https://github.com/dalsoop/gujo-homelab-world-playbook)
+is the planned source of environment
 intent. It will select Catalog entries, bind installation intent to the user's
 devices, and provide policy to this Installer without moving Installer behavior
 or long-lived secrets into the Playbook.
