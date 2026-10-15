@@ -68,10 +68,12 @@ jq -e '
   (([.bundles[].id] | length) == ([.bundles[].id] | unique | length)) and
   (([.bundles[].destination] | length) == ([.bundles[].destination] | unique | length)) and
   ([.groups[].id] as $groups | all(.entries[]; (.group as $group | $groups | index($group)) != null)) and
-  (all(.entries[] as $entry;
-    any(.groups[];
-      .id == $entry.group and
-      (.path as $group_path | $entry.destination | startswith($group_path + "/"))))) and
+  (.groups as $groups |
+    all(.entries[];
+      . as $entry |
+      any($groups[];
+        .id == $entry.group and
+        (.path as $group_path | $entry.destination | startswith($group_path + "/"))))) and
   (([.bootloader.source.filename] + [.entries[].source | select(.kind == "locked-download") | .filename] | length) ==
    ([.bootloader.source.filename] + [.entries[].source | select(.kind == "locked-download") | .filename] | unique | length)) and
   ([.entries[] | select(.profile_adapter == "dns-appliance")] | length == 1) and
