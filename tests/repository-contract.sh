@@ -67,7 +67,10 @@ python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
 python3 -c 'import sys; compile(open(sys.argv[1], encoding="utf-8").read(), sys.argv[1], "exec")' \
     "$repo_root/management/dns-appliance-status-monitor/server.py"
 
-! grep -R -i -E 'dns-appliance-provisioning|superusb' \
-    "$repo_root" --exclude-dir=.git --exclude=repository-contract.sh
+if grep -R -i -E 'dns-appliance-provisioning|superusb' \
+    "$repo_root" --exclude-dir=.git --exclude=repository-contract.sh; then
+    echo "repository-contract: obsolete project name remains" >&2
+    exit 1
+fi
 
 echo "repository contracts: passed"

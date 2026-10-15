@@ -40,7 +40,9 @@ done
 [ -b "$device" ] || usage
 [ "$(lsblk -dnro TYPE "$device")" = disk ] || fail "whole-disk target required"
 [ "$(lsblk -dnro RM "$device")" = 1 ] || fail "target is not reported removable"
-[ -r "$dns_iso" ] && [ -r "$dns_manifest" ] || usage
+if [ ! -r "$dns_iso" ] || [ ! -r "$dns_manifest" ]; then
+    usage
+fi
 
 root_source=$(findmnt -nro SOURCE /)
 root_parent=/dev/$(lsblk -no PKNAME "$root_source" 2>/dev/null | sed -n '1p')
@@ -91,15 +93,21 @@ echo "bytes: $device_bytes"
 echo "warning: all existing partitions and data will be erased"
 
 while read -r partition; do
-    [ -n "$partition" ] && umount "$partition" 2>/dev/null || true
+    if [ -n "$partition" ]; then
+        umount "$partition" 2>/dev/null || true
+    fi
 done < <(lsblk -nrpo NAME,TYPE "$device" | awk '$2 == "part" { print $1 }')
 
 temporary=$(mktemp -d /tmp/homelab-usb.XXXXXX)
 mount_dir=$temporary/mount
 enroll_dir=$temporary/enroll
 cleanup() {
-    mountpoint -q "$mount_dir" 2>/dev/null && umount "$mount_dir" || true
-    mountpoint -q "$enroll_dir" 2>/dev/null && umount "$enroll_dir" || true
+    if mountpoint -q "$mount_dir" 2>/dev/null; then
+        umount "$mount_dir" || true
+    fi
+    if mountpoint -q "$enroll_dir" 2>/dev/null; then
+        umount "$enroll_dir" || true
+    fi
     rm -rf "$temporary"
 }
 trap cleanup EXIT HUP INT TERM
