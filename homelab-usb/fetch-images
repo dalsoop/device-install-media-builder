@@ -5,10 +5,10 @@ script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
 # shellcheck disable=SC1091
 . "$script_dir/locks.env"
-cache_dir=${SUPERUSB_CACHE_DIR:-$repo_root/cache/superusb}
+cache_dir=${HOMELAB_USB_CACHE_DIR:-$repo_root/cache/homelab-usb}
 
 fail() {
-    echo "superusb fetch-images: $*" >&2
+    echo "homelab-usb fetch-images: $*" >&2
     exit 1
 }
 
@@ -39,5 +39,9 @@ fetch "ventoy-$VENTOY_VERSION-linux.tar.gz" "$VENTOY_LINUX_URL" "$VENTOY_LINUX_S
 fetch "debian-live-$DEBIAN_LIVE_VERSION-amd64-standard.iso" "$DEBIAN_LIVE_URL" "$DEBIAN_LIVE_SHA256"
 fetch "proxmox-ve_$PROXMOX_VE_VERSION.iso" "$PROXMOX_VE_URL" "$PROXMOX_VE_SHA256"
 fetch "TrueNAS-SCALE-$TRUENAS_VERSION.iso" "$TRUENAS_URL" "$TRUENAS_SHA256"
+fetch "proxmox-backup-server_$PROXMOX_BACKUP_SERVER_VERSION.iso" \
+    "$PROXMOX_BACKUP_SERVER_URL" "$PROXMOX_BACKUP_SERVER_SHA256"
+fetch "pop-os_${POP_OS_VERSION}_amd64_generic_${POP_OS_BUILD}.iso" \
+    "$POP_OS_URL" "$POP_OS_SHA256"
 
-echo "superusb fetch-images: verified cache at $cache_dir"
+echo "homelab-usb fetch-images: verified cache at $cache_dir"
