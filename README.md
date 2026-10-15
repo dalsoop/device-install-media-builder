@@ -1,6 +1,6 @@
 # Homelab Bootstrap Media
 
-[![CI](https://github.com/gujoai/homelab-bootstrap-media/actions/workflows/ci.yml/badge.svg)](https://github.com/gujoai/homelab-bootstrap-media/actions/workflows/ci.yml)
+[![CI](https://github.com/dalsoop/homelab-bootstrap-media/actions/workflows/ci.yml/badge.svg)](https://github.com/dalsoop/homelab-bootstrap-media/actions/workflows/ci.yml)
 
 홈랩 장비의 설치·복구·검증을 한 USB에서 수행하기 위한 재현 가능한 소스다.
 체크섬이 고정된 범용 설치 이미지와, HP 장비를 정확히 식별한 뒤에만 동작하는

@@ -82,4 +82,10 @@ if grep -R -i -E 'dns-appliance-provisioning|superusb' \
     exit 1
 fi
 
+if grep -R -F 'github.com/gujoai/homelab-bootstrap-media' \
+    "$repo_root" --exclude-dir=.git --exclude=repository-contract.sh; then
+    echo "repository-contract: previous repository owner remains" >&2
+    exit 1
+fi
+
 echo "repository contracts: passed"

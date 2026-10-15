@@ -2,7 +2,7 @@
   "schema_version": 1,
   "product": {
     "name": "Homelab Bootstrap USB",
-    "repository": "https://github.com/gujoai/homelab-bootstrap-media"
+    "repository": "https://github.com/dalsoop/homelab-bootstrap-media"
   },
   "usb": {
     "data_label": "HOMELAB-USB",
