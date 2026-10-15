@@ -3,46 +3,85 @@ set -euo pipefail
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
-# shellcheck disable=SC1091
-. "$script_dir/locks.env"
+catalog=${HOMELAB_MEDIA_CATALOG:-$script_dir/catalog.json}
 cache_dir=${HOMELAB_USB_CACHE_DIR:-$repo_root/cache/homelab-usb}
-reserve_mib=2048
 device=
-dns_iso=
-dns_manifest=
 confirmation=
+legacy_dns_iso=
+legacy_dns_manifest=
+declare -A runtime_artifacts=()
+declare -A runtime_manifests=()
+declare -A staged_sources=()
+declare -A staged_manifests=()
 
 usage() {
-    echo "usage: sudo $0 --device /dev/sdX --dns-iso image.iso --dns-manifest build-manifest.json --confirm 'ERASE /dev/sdX SERIAL'" >&2
+    cat >&2 <<EOF
+usage: sudo $0 --device /dev/sdX \\
+  --runtime-artifact dns-appliance=/path/image.iso \\
+  --runtime-manifest dns-appliance=/path/build-manifest.json \\
+  --confirm 'ERASE /dev/sdX SERIAL'
+
+Compatibility aliases: --dns-iso PATH --dns-manifest PATH
+Optional: --catalog PATH
+EOF
     exit 2
 }
-
-while [ "$#" -gt 0 ]; do
-    case "$1" in
-        --device) device=${2:-}; shift 2 ;;
-        --dns-iso) dns_iso=${2:-}; shift 2 ;;
-        --dns-manifest) dns_manifest=${2:-}; shift 2 ;;
-        --confirm) confirmation=${2:-}; shift 2 ;;
-        *) usage ;;
-    esac
-done
 
 fail() {
     echo "homelab-usb write-usb-linux: $*" >&2
     exit 1
 }
 
+assignment_parts() {
+    value=$1
+    case "$value" in
+        *=*) ;;
+        *) fail "runtime input must use id=/absolute/path: $value" ;;
+    esac
+    assignment_id=${value%%=*}
+    assignment_path=${value#*=}
+    [[ "$assignment_id" =~ ^[a-z0-9][a-z0-9-]*$ ]] || fail "invalid runtime id: $assignment_id"
+    [[ "$assignment_path" = /* ]] || fail "runtime path must be absolute: $assignment_path"
+}
+
+while [ "$#" -gt 0 ]; do
+    case "$1" in
+        --device) device=${2:-}; shift 2 ;;
+        --catalog) catalog=${2:-}; shift 2 ;;
+        --runtime-artifact)
+            assignment_parts "${2:-}"
+            runtime_artifacts["$assignment_id"]=$assignment_path
+            shift 2
+            ;;
+        --runtime-manifest)
+            assignment_parts "${2:-}"
+            runtime_manifests["$assignment_id"]=$assignment_path
+            shift 2
+            ;;
+        --dns-iso) legacy_dns_iso=${2:-}; shift 2 ;;
+        --dns-manifest) legacy_dns_manifest=${2:-}; shift 2 ;;
+        --confirm) confirmation=${2:-}; shift 2 ;;
+        *) usage ;;
+    esac
+done
+
+if [ -n "$legacy_dns_iso" ]; then
+    runtime_artifacts[dns-appliance]=$legacy_dns_iso
+fi
+if [ -n "$legacy_dns_manifest" ]; then
+    runtime_manifests[dns-appliance]=$legacy_dns_manifest
+fi
+
 [ "$(uname -s)" = Linux ] || fail "Linux is required"
 [ "$(id -u)" -eq 0 ] || fail "run as root"
 for command in lsblk findmnt jq sha256sum python3 sfdisk blockdev udevadm mkfs.exfat; do
     command -v "$command" >/dev/null 2>&1 || fail "$command is required"
 done
+"$script_dir/verify-catalog" "$catalog" >/dev/null
+
 [ -b "$device" ] || usage
 [ "$(lsblk -dnro TYPE "$device")" = disk ] || fail "whole-disk target required"
 [ "$(lsblk -dnro RM "$device")" = 1 ] || fail "target is not reported removable"
-if [ ! -r "$dns_iso" ] || [ ! -r "$dns_manifest" ]; then
-    usage
-fi
 
 root_source=$(findmnt -nro SOURCE /)
 root_parent=/dev/$(lsblk -no PKNAME "$root_source" 2>/dev/null | sed -n '1p')
@@ -54,34 +93,66 @@ model=$(lsblk -dnro MODEL "$device" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')
 [ "$confirmation" = "ERASE $device $serial" ] ||
     fail "exact confirmation must include device and serial: ERASE $device $serial"
 
-"$script_dir/verify-locks" >/dev/null
-declare -a locked_files=(
-    "$cache_dir/ventoy-$VENTOY_VERSION-linux.tar.gz"
-    "$cache_dir/debian-live-$DEBIAN_LIVE_VERSION-amd64-standard.iso"
-    "$cache_dir/proxmox-ve_$PROXMOX_VE_VERSION.iso"
-    "$cache_dir/TrueNAS-SCALE-$TRUENAS_VERSION.iso"
-    "$cache_dir/proxmox-backup-server_$PROXMOX_BACKUP_SERVER_VERSION.iso"
-    "$cache_dir/pop-os_${POP_OS_VERSION}_amd64_generic_${POP_OS_BUILD}.iso"
-)
-for file in "${locked_files[@]}"; do
-    [ -s "$file" ] || fail "missing $file; run homelab-usb/fetch-images"
-done
-printf '%s  %s\n' "$VENTOY_LINUX_SHA256" "${locked_files[0]}" | sha256sum -c - >/dev/null
-printf '%s  %s\n' "$DEBIAN_LIVE_SHA256" "${locked_files[1]}" | sha256sum -c - >/dev/null
-printf '%s  %s\n' "$PROXMOX_VE_SHA256" "${locked_files[2]}" | sha256sum -c - >/dev/null
-printf '%s  %s\n' "$TRUENAS_SHA256" "${locked_files[3]}" | sha256sum -c - >/dev/null
-printf '%s  %s\n' "$PROXMOX_BACKUP_SERVER_SHA256" "${locked_files[4]}" | sha256sum -c - >/dev/null
-printf '%s  %s\n' "$POP_OS_SHA256" "${locked_files[5]}" | sha256sum -c - >/dev/null
+data_label=$(jq -er '.usb.data_label' "$catalog")
+enrollment_label=$(jq -er '.usb.enrollment_label' "$catalog")
+reserve_mib=$(jq -er '.usb.enrollment_reserve_mib' "$catalog")
+overhead_mib=$(jq -er '.usb.capacity_overhead_mib' "$catalog")
+bootloader_filename=$(jq -er '.bootloader.source.filename' "$catalog")
+bootloader_sha256=$(jq -er '.bootloader.source.sha256' "$catalog")
+bootloader_root=$(jq -er '.bootloader.archive_root' "$catalog")
+bootloader_file=$cache_dir/$bootloader_filename
+[ -s "$bootloader_file" ] || fail "missing $bootloader_file; run homelab-usb/fetch-images"
+printf '%s  %s\n' "$bootloader_sha256" "$bootloader_file" | sha256sum -c - >/dev/null ||
+    fail "bootloader checksum mismatch"
 
-expected_dns_sha=$(jq -er '.iso_sha256 | select(test("^[a-f0-9]{64}$"))' "$dns_manifest")
-actual_dns_sha=$(sha256sum "$dns_iso" | awk '{print $1}')
-[ "$actual_dns_sha" = "$expected_dns_sha" ] || fail "DNS installer checksum mismatch"
+required_bytes=0
+dns_manifest=
+while IFS= read -r entry; do
+    id=$(jq -er '.id' <<<"$entry")
+    kind=$(jq -er '.source.kind' <<<"$entry")
+    adapter=$(jq -er '.profile_adapter' <<<"$entry")
+    case "$kind" in
+        locked-download)
+            filename=$(jq -er '.source.filename' <<<"$entry")
+            expected=$(jq -er '.source.sha256' <<<"$entry")
+            source_file=$cache_dir/$filename
+            [ -s "$source_file" ] || fail "missing $source_file; run homelab-usb/fetch-images"
+            printf '%s  %s\n' "$expected" "$source_file" | sha256sum -c - >/dev/null ||
+                fail "checksum mismatch for $id"
+            ;;
+        runtime-artifact)
+            source_file=${runtime_artifacts[$id]:-}
+            manifest=${runtime_manifests[$id]:-}
+            [ -r "$source_file" ] || fail "missing --runtime-artifact $id=/absolute/path"
+            [ -r "$manifest" ] || fail "missing --runtime-manifest $id=/absolute/path"
+            digest_field=$(jq -er '.source.manifest_digest_field' <<<"$entry")
+            expected=$(jq -er --arg field "$digest_field" \
+                '.[$field] | select(type == "string" and test("^[a-f0-9]{64}$"))' "$manifest")
+            actual=$(sha256sum "$source_file" | awk '{print $1}')
+            [ "$actual" = "$expected" ] || fail "runtime artifact checksum mismatch for $id"
+            staged_manifests["$id"]=$manifest
+            if [ "$adapter" = dns-appliance ]; then
+                dns_manifest=$manifest
+            fi
+            ;;
+        *) fail "unsupported entry source kind: $kind" ;;
+    esac
+    staged_sources["$id"]=$source_file
+    required_bytes=$((required_bytes + $(stat -c %s "$source_file")))
+done < <(jq -c '.entries[]' "$catalog")
+[ -n "$dns_manifest" ] || fail "catalog requires a dns-appliance runtime profile"
 
-required_bytes=$(stat -c %s "$dns_iso")
-for file in "${locked_files[@]:1}"; do
-    required_bytes=$((required_bytes + $(stat -c %s "$file")))
-done
-required_bytes=$((required_bytes + reserve_mib * 1024 * 1024 + 768 * 1024 * 1024))
+while IFS= read -r bundle; do
+    kind=$(jq -er '.source.kind' <<<"$bundle")
+    path=$(jq -er '.source.path' <<<"$bundle")
+    case "$kind" in
+        repository-file) [ -f "$repo_root/$path" ] || fail "missing repository file: $path" ;;
+        repository-tree) [ -d "$repo_root/$path" ] || fail "missing repository tree: $path" ;;
+        *) fail "unsupported bundle source kind: $kind" ;;
+    esac
+done < <(jq -c '.bundles[]' "$catalog")
+
+required_bytes=$((required_bytes + reserve_mib * 1024 * 1024 + overhead_mib * 1024 * 1024))
 device_bytes=$(blockdev --getsize64 "$device")
 [ "$device_bytes" -gt "$required_bytes" ] ||
     fail "USB is too small; need more than $required_bytes bytes"
@@ -112,14 +183,15 @@ cleanup() {
 }
 trap cleanup EXIT HUP INT TERM
 
-tar -xzf "${locked_files[0]}" -C "$temporary"
-ventoy_dir=$temporary/ventoy-$VENTOY_VERSION
+tar -xzf "$bootloader_file" -C "$temporary"
+ventoy_dir=$temporary/$bootloader_root
 [ -x "$ventoy_dir/Ventoy2Disk.sh" ] || fail "Ventoy archive layout is unexpected"
-printf 'y\ny\n' | "$ventoy_dir/Ventoy2Disk.sh" -I -r "$reserve_mib" -L HOMELAB-USB "$device"
+printf 'y\ny\n' | "$ventoy_dir/Ventoy2Disk.sh" -I -r "$reserve_mib" -L "$data_label" "$device"
 blockdev --rereadpt "$device" || true
 udevadm settle
 
-main_partition=$(lsblk -nrpo NAME,LABEL "$device" | awk '$2 == "HOMELAB-USB" { print $1; exit }')
+main_partition=$(lsblk -nrpo NAME,LABEL "$device" |
+    awk -v label="$data_label" '$2 == label { print $1; exit }')
 [ -b "$main_partition" ] || fail "Ventoy data partition was not found"
 
 sector_size=$(blockdev --getss "$device")
@@ -132,81 +204,68 @@ blockdev --rereadpt "$device"
 udevadm settle
 enroll_partition=$(lsblk -nrpo NAME,TYPE,START "$device" |
     awk -v start="$start" '$2 == "part" && $3 == start { print $1; exit }')
-[ -b "$enroll_partition" ] || fail "DNS-ENROLL partition was not found"
-mkfs.exfat -n DNS-ENROLL "$enroll_partition"
+[ -b "$enroll_partition" ] || fail "$enrollment_label partition was not found"
+mkfs.exfat -n "$enrollment_label" "$enroll_partition"
 
 mkdir -p "$mount_dir" "$enroll_dir"
 mount "$main_partition" "$mount_dir"
-install -d -m 0755 "$mount_dir/images/01-dns" "$mount_dir/images/02-virtualization" \
-    "$mount_dir/images/03-storage" "$mount_dir/images/04-desktop" \
-    "$mount_dir/images/90-tools" "$mount_dir/manifests" "$mount_dir/ventoy" \
-    "$mount_dir/guides" "$mount_dir/tools/dns-appliance-status-monitor"
-install -m 0644 "$dns_iso" "$mount_dir/images/01-dns/dns-appliance-installer.iso"
-install -m 0644 "${locked_files[2]}" "$mount_dir/images/02-virtualization/proxmox-ve-$PROXMOX_VE_VERSION.iso"
-install -m 0644 "${locked_files[4]}" "$mount_dir/images/02-virtualization/proxmox-backup-server-$PROXMOX_BACKUP_SERVER_VERSION.iso"
-install -m 0644 "${locked_files[3]}" "$mount_dir/images/03-storage/truenas-$TRUENAS_VERSION.iso"
-install -m 0644 "${locked_files[5]}" "$mount_dir/images/04-desktop/pop-os-$POP_OS_VERSION-generic-build-$POP_OS_BUILD.iso"
-install -m 0644 "${locked_files[1]}" "$mount_dir/images/90-tools/debian-live-$DEBIAN_LIVE_VERSION.iso"
-install -m 0644 "$dns_manifest" "$mount_dir/manifests/dns-build-manifest.json"
-install -m 0644 "$script_dir/guides/pop-os-ko.md" "$mount_dir/guides/POP_OS_KO.md"
-install -m 0644 "$repo_root/management/dns-appliance-status-monitor/config.json" \
-    "$repo_root/management/dns-appliance-status-monitor/server.py" \
-    "$repo_root/management/dns-appliance-status-monitor/README.md" \
-    "$mount_dir/tools/dns-appliance-status-monitor/"
-install -m 0755 "$repo_root/management/dns-appliance-status-monitor/start" \
-    "$mount_dir/tools/dns-appliance-status-monitor/start"
+install -d -m 0755 "$mount_dir/manifests" "$mount_dir/ventoy"
+
+while IFS= read -r entry; do
+    id=$(jq -er '.id' <<<"$entry")
+    destination=$(jq -er '.destination' <<<"$entry")
+    install -d -m 0755 "$(dirname -- "$mount_dir/$destination")"
+    install -m 0644 "${staged_sources[$id]}" "$mount_dir/$destination"
+    if [ "$(jq -er '.source.kind' <<<"$entry")" = runtime-artifact ]; then
+        manifest_destination=$(jq -er '.source.manifest_destination' <<<"$entry")
+        install -d -m 0755 "$(dirname -- "$mount_dir/$manifest_destination")"
+        install -m 0644 "${staged_manifests[$id]}" "$mount_dir/$manifest_destination"
+    fi
+done < <(jq -c '.entries[]' "$catalog")
+
+while IFS= read -r bundle; do
+    kind=$(jq -er '.source.kind' <<<"$bundle")
+    path=$(jq -er '.source.path' <<<"$bundle")
+    destination=$(jq -er '.destination' <<<"$bundle")
+    case "$kind" in
+        repository-file)
+            install -d -m 0755 "$(dirname -- "$mount_dir/$destination")"
+            install -m 0644 "$repo_root/$path" "$mount_dir/$destination"
+            ;;
+        repository-tree)
+            install -d -m 0755 "$mount_dir/$destination"
+            cp -a "$repo_root/$path/." "$mount_dir/$destination/"
+            ;;
+        *) fail "unsupported bundle source kind: $kind" ;;
+    esac
+done < <(jq -c '.bundles[]' "$catalog")
+
+install -m 0644 "$catalog" "$mount_dir/manifests/media-catalog.json"
 (
     cd "$mount_dir"
     find images -type f -name '*.iso' -exec sha256sum {} + | LC_ALL=C sort > manifests/SHA256SUMS
+    sha256sum manifests/media-catalog.json > manifests/MEDIA-CATALOG.SHA256
 )
-cat > "$mount_dir/ventoy/ventoy.json" <<EOF
-{
-  "control": [
-    { "VTOY_MENU_LANGUAGE": "ko_KR" },
-    { "VTOY_HELP_TXT_LANGUAGE": "ko_KR" },
-    { "VTOY_DEFAULT_MENU_MODE": "1" },
-    { "VTOY_TREE_VIEW_MENU_STYLE": "1" },
-    { "VTOY_DEFAULT_SEARCH_ROOT": "/images" },
-    { "VTOY_FILT_DOT_UNDERSCORE_FILE": "1" }
-  ],
-  "menu_alias": [
-    { "dir": "/images/01-dns", "alias": "01 DNS 서버" },
-    { "dir": "/images/02-virtualization", "alias": "02 가상화 및 백업" },
-    { "dir": "/images/03-storage", "alias": "03 스토리지" },
-    { "dir": "/images/04-desktop", "alias": "04 데스크톱" },
-    { "dir": "/images/90-tools", "alias": "90 점검 및 복구" },
-    { "image": "/images/01-dns/dns-appliance-installer.iso", "alias": "DNS 서버 자동 설치 (HP 전용, 디스크 삭제 주의)" },
-    { "image": "/images/02-virtualization/proxmox-ve-$PROXMOX_VE_VERSION.iso", "alias": "Proxmox VE $PROXMOX_VE_VERSION 대화형 설치" },
-    { "image": "/images/02-virtualization/proxmox-backup-server-$PROXMOX_BACKUP_SERVER_VERSION.iso", "alias": "Proxmox Backup Server $PROXMOX_BACKUP_SERVER_VERSION 대화형 설치" },
-    { "image": "/images/03-storage/truenas-$TRUENAS_VERSION.iso", "alias": "TrueNAS SCALE $TRUENAS_VERSION 대화형 설치" },
-    { "image": "/images/04-desktop/pop-os-$POP_OS_VERSION-generic-build-$POP_OS_BUILD.iso", "alias": "Pop!_OS $POP_OS_VERSION 한국어 설치" },
-    { "image": "/images/90-tools/debian-live-$DEBIAN_LIVE_VERSION.iso", "alias": "Debian Live $DEBIAN_LIVE_VERSION 장비 점검" }
-  ]
-}
-EOF
+"$script_dir/render-ventoy-config" "$catalog" > "$mount_dir/ventoy/ventoy.json"
 python3 -c 'import json,sys; json.load(open(sys.argv[1], encoding="utf-8"))' \
     "$mount_dir/ventoy/ventoy.json"
-cat > "$mount_dir/README_KO.txt" <<EOF
-HOMELAB BOOTSTRAP USB / 홈랩 부트스트랩 USB
 
-01 DNS 서버: HP 인벤토리가 정확히 일치해야만 삭제가 허용되는 자동 설치기.
-02 가상화 및 백업: Proxmox VE와 Proxmox Backup Server 대화형 설치기.
-03 스토리지: TrueNAS SCALE 대화형 설치기.
-04 데스크톱: Pop!_OS 설치기. guides/POP_OS_KO.md를 먼저 읽을 것.
-90 점검 및 복구: Debian Live.
-tools/dns-appliance-status-monitor/start: 세 DNS 장비 상태판 실행.
-
-자동 선택 타이머는 없다. 각 설치기 안에서 대상 디스크를 다시 확인해야 한다.
-DNS 등록 결과는 DNS-ENROLL 파티션에만 기록된다. Ventoy 언어는 L 키로 바꾼다.
-EOF
-cat > "$mount_dir/README_EN.txt" <<EOF
-HOMELAB BOOTSTRAP USB
-
-The menu defaults to Korean; press L in Ventoy to select another language.
-No installer has an automatic menu timeout. Proxmox, PBS, TrueNAS, and Pop!_OS
-remain interactive. Verify the destination disk inside every installer. DNS
-enrollment results are written only to DNS-ENROLL.
-EOF
+{
+    echo "HOMELAB BOOTSTRAP USB / 홈랩 부트스트랩 USB"
+    echo
+    jq -r '.entries[] | "- \(.menu_alias): \(.description_ko)"' "$catalog"
+    echo
+    echo "자동 선택 타이머는 없다. 각 설치기 안에서 대상 디스크를 다시 확인해야 한다."
+    echo "DNS 등록 결과는 DNS-ENROLL 파티션에만 기록된다. Ventoy 언어는 L 키로 바꾼다."
+} > "$mount_dir/README_KO.txt"
+{
+    echo "HOMELAB BOOTSTRAP USB"
+    echo
+    jq -r '.entries[] | "- \(.menu_alias): \(.description_en)"' "$catalog"
+    echo
+    echo "There is no automatic menu timeout. Verify the destination disk in every installer."
+    echo "DNS enrollment output is written only to DNS-ENROLL. Press L to change Ventoy language."
+} > "$mount_dir/README_EN.txt"
 sync -f "$mount_dir"
 umount "$mount_dir"
 
@@ -217,5 +276,5 @@ jq '{schema_version:1,build_id:.build_id,image_sha256:.iso_sha256,debian_point_r
 sync -f "$enroll_dir"
 umount "$enroll_dir"
 
-echo "homelab-usb write-usb-linux: verified sources and created HOMELAB-USB plus DNS-ENROLL"
+echo "homelab-usb write-usb-linux: verified catalog and created $data_label plus $enrollment_label"
 echo "homelab-usb write-usb-linux: target remains $device; eject it before unplugging"

@@ -12,6 +12,9 @@ evidence.
 - `tests/management-simulation.sh` passes all 4 cases.
 - `tests/tailscale-enrollment-simulation.sh` passes without printing either
   OAuth or auth-key material.
+- `tests/media-catalog-simulation.sh` rejects duplicate identities, unknown
+  strategies/adapters, path traversal, and invalid digests, then proves that a
+  new standard ISO reaches the Ventoy menu through catalog data alone.
 - `tests/repository-contract.sh` passes.
 - ShellCheck reports no errors.
 - GitHub CI passes on the exact commit to be built.
@@ -59,6 +62,8 @@ evidence.
 
 - Verify Ventoy, Debian Live, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE,
   and Pop!_OS against committed SHA-256 locks before copying.
+- Verify `manifests/MEDIA-CATALOG.SHA256` and retain the exact catalog copied to
+  the USB with release evidence.
 - Verify every copied ISO using the USB's generated `manifests/SHA256SUMS`.
 - Test legacy BIOS and UEFI menus; treat Secure Boot as failed until the exact
   HP firmware and every selected image boot successfully.

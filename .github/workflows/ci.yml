@@ -32,5 +32,7 @@ jobs:
         run: tests/management-simulation.sh
       - name: Run Tailscale enrollment simulation
         run: tests/tailscale-enrollment-simulation.sh
+      - name: Run polymorphic media catalog simulation
+        run: tests/media-catalog-simulation.sh
       - name: Verify repository contracts
         run: tests/repository-contract.sh

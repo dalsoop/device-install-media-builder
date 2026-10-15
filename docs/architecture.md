@@ -52,13 +52,23 @@ Tailscale SSH by default. Normal OpenSSH remains the recovery surface.
 
 ### Utility media plane
 
-`homelab-usb/` builds a Korean-first Ventoy menu containing the guarded DNS
-appliance ISO, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE, Pop!_OS, and
-Debian Live. Upstream images are version- and SHA-256-pinned; generated images
-and ISOs remain outside Git. A distinct `DNS-ENROLL` partition preserves the
-DNS first-boot contract. A dependency-free, read-only status page can run from
-the USB on Pop!_OS or another Python 3 Linux environment to probe all three DNS
-nodes without installing software on them.
+`homelab-usb/catalog.json` declares a Korean-first Ventoy menu containing the
+guarded DNS appliance ISO, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE,
+Pop!_OS, and Debian Live. The fetcher, verifier, menu renderer, and writer
+consume the same catalog instead of embedding product branches independently.
+
+Entries share one contract and resolve through source strategies. A
+`locked-download` entry uses an HTTPS URL and SHA-256, while a
+`runtime-artifact` uses a caller-provided file and build manifest. Repository
+file/tree strategies stage guides and portable tools. Product-specific behavior
+uses an independent profile adapter; only the DNS adapter owns encrypted
+enrollment metadata and guarded unattended installation.
+
+Generated images and ISOs remain outside Git. The exact catalog is copied to
+the assembled USB and hashed alongside all ISO files. A distinct `DNS-ENROLL`
+partition preserves the DNS first-boot contract. A dependency-free, read-only
+status page can run from the USB on Pop!_OS or another Python 3 Linux
+environment to probe all three DNS nodes without installing software on them.
 
 Proxmox VE, Proxmox Backup Server, TrueNAS, and Pop!_OS always remain
 interactive. Their inclusion on the same USB does not authorize unattended

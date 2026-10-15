@@ -22,9 +22,11 @@ for file in \
     management/collect-backups \
     management/tailscale-enroll \
     homelab-usb/fetch-images \
-    homelab-usb/verify-locks \
+    homelab-usb/verify-catalog \
+    homelab-usb/render-ventoy-config \
     homelab-usb/write-usb-linux \
     management/dns-appliance-status-monitor/start \
+    tests/media-catalog-simulation.sh \
     tests/management-simulation.sh; do
     [ -x "$repo_root/$file" ] || {
         echo "repository-contract: $file must be executable" >&2
@@ -38,8 +40,9 @@ for required in \
     schemas/enrollment-record.schema.json \
     zones/home.arpa.zone \
     management/tailscale-policy.example.hujson \
-    homelab-usb/locks.env \
+    homelab-usb/catalog.json \
     homelab-usb/guides/pop-os-ko.md \
+    docs/decisions/0002-polymorphic-media-catalog.md \
     management/dns-appliance-status-monitor/config.json \
     management/dns-appliance-status-monitor/server.py \
     .github/workflows/ci.yml; do
@@ -64,8 +67,14 @@ python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
     "$repo_root/schemas/enrollment-record.schema.json"
 python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
     "$repo_root/management/dns-appliance-status-monitor/config.json"
+python3 -c 'import json,sys; json.load(open(sys.argv[1]))' \
+    "$repo_root/homelab-usb/catalog.json"
 python3 -c 'import sys; compile(open(sys.argv[1], encoding="utf-8").read(), sys.argv[1], "exec")' \
     "$repo_root/management/dns-appliance-status-monitor/server.py"
+"$repo_root/homelab-usb/verify-catalog" >/dev/null
+
+grep -q 'runtime-artifact' "$repo_root/README.md"
+grep -q 'locked-download' "$repo_root/homelab-usb/README.md"
 
 if grep -R -i -E 'dns-appliance-provisioning|superusb' \
     "$repo_root" --exclude-dir=.git --exclude=repository-contract.sh; then
