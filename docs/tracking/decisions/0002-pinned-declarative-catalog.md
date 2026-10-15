@@ -8,15 +8,15 @@
 Embedding each product, version, URL, checksum, destination, and menu label in
 shell branches caused the fetcher, writer, menu, capacity estimate, and
 documentation to drift. A shared public catalog is useful only if it cannot
-inject executable behavior into Installer forks.
+inject executable behavior into Installer consumers.
 
 ## Decision
 
-Public bootloader and OS metadata live as one JSON file per item in the Device
-Gujo Homelab OS Catalog. A Installer fork pins an exact Catalog commit, selects
-public IDs through a collection, and keeps private or profile-specific entries
-locally. The resolver fetches data only, validates it with Installer-owned rules,
-and emits one resolved plan for downstream stages.
+Public bootloader and OS metadata live as one JSON file per item in the Gujo
+Homelab OS Catalog. A World Playbook pins an exact Catalog commit, selects
+public IDs, and keeps private or profile-specific entries locally. The Installer
+resolver fetches data only, validates it with Installer-owned rules, and emits
+one resolved plan for downstream stages.
 
 Source behavior is selected by an explicitly implemented `source.kind`.
 Product-specific behavior is selected independently by
@@ -29,7 +29,7 @@ Product-specific behavior is selected independently by
 - Tracking a Catalog branch or `latest` was rejected because an unchanged
   Installer commit could resolve to new, unreviewed inputs.
 - Executing helper code from the Catalog was rejected because a metadata update
-  would become remote code execution in every consuming fork.
+  would become remote code execution in every consuming Playbook.
 - A dynamic third-party plug-in loader was deferred because its code trust,
   capability, and compatibility boundaries are not defined.
 

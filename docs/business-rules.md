@@ -2,14 +2,16 @@
 
 ## Product model
 
-The Installer is designed to be forked. A fork owns its selected collection,
-local media profiles, support bundles, USB labels, and pinned Catalog revision.
-Public media metadata is contributed to the Catalog repository rather than
-copied into Installer code.
+The Installer is a shared execution engine and is not the ordinary user's fork
+target. A user creates one repository from the Gujo Homelab World Playbook
+template. That Playbook owns selected media, local profiles, hardware bindings,
+USB labels, safety policy, and append-only USB generations. Public media
+metadata is contributed to the Catalog rather than copied into either the
+Installer or a Playbook.
 
-The default fork includes Proxmox VE, Proxmox Backup Server, TrueNAS SCALE,
-Pop!_OS, Debian Live, and a local DNS-appliance installer. Inclusion in one USB
-does not grant the same automation level to every entry.
+The current Installer reference composition includes Proxmox VE, Proxmox Backup
+Server, TrueNAS SCALE, Pop!_OS, Debian Live, and a local DNS-appliance installer.
+Inclusion in one USB does not grant the same automation level to every entry.
 
 ## Media rules
 
@@ -28,12 +30,16 @@ does not grant the same automation level to every entry.
 - The generated USB contains the resolved catalog and checksums for every staged
   image so its inputs can be reconstructed.
 
-## Fork customization
+## World Playbook customization
 
-A user may add or remove existing public entries by changing the collection.
-A private or organization-specific image belongs in a local entry. A fork may
-pin another Catalog fork, but that choice transfers trust to the selected
-repository and exact commit.
+A user adds or removes public entries in the World Playbook. A private or
+organization-specific image belongs in a Playbook-local entry. Selecting a
+different Catalog repository transfers trust to that repository and its exact
+commit.
+
+The current `collections/` and `usb-media/local-entries/` directories remain an
+Installer-owned reference surface until the external World consumer is
+implemented. They are not the final user customization boundary.
 
 An entry that uses an implemented source kind and `profile_adapter: none` must
 flow through resolution, fetch, verification, staging, and menu generation

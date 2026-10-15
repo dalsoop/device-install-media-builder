@@ -1,13 +1,16 @@
 # 0004: Adopt Gujo Homelab OS Repository Names
 
-Status: Accepted
+Status: Amended by 0007
 
 ## Decision
 
-Use **Gujo Homelab OS Installer** for this fork-oriented tool and `device-os`
+Use **Gujo Homelab OS Installer** for this shared engine and `device-os`
 for its human-facing command. Use **Gujo Homelab OS Catalog** for the separate
 public metadata repository and **Gujo Homelab OS USB** for the resulting
 multiboot device.
+
+Decision 0007 adds **Gujo Homelab World Playbook** as the only ordinary
+user-created repository and removes the Installer's fork-oriented role.
 
 Keep `media` only where it identifies an implementation concept such as an ISO,
 disk image, removable medium, or the internal `usb-media/` module.

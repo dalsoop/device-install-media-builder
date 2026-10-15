@@ -3,11 +3,12 @@
 [![CI](https://github.com/dalsoop/gujo-homelab-os-installer/actions/workflows/ci.yml/badge.svg)](https://github.com/dalsoop/gujo-homelab-os-installer/actions/workflows/ci.yml)
 
 Build one verified, Korean-first multiboot USB from public operating-system
-metadata and fork-local profiles. The public
+metadata and user-owned World intent. The public
 [Gujo Homelab OS Catalog](https://github.com/dalsoop/gujo-homelab-os-catalog)
-supplies official URLs and SHA-256 values. This repository owns selection,
-resolution, downloads, verification, Ventoy layout, physical USB safeguards,
-and local profiles.
+supplies official URLs and SHA-256 values. The
+[Gujo Homelab World Playbook](https://github.com/dalsoop/gujo-homelab-world-playbook)
+is the only repository an ordinary user creates and edits. This Installer owns
+resolution, downloads, verification, Ventoy layout, and physical USB safeguards.
 
 The default composition includes Proxmox VE, Proxmox Backup Server, TrueNAS
 SCALE, Pop!_OS, Debian Live, and a guarded offline installer for three HP DNS
@@ -18,13 +19,25 @@ appliances.
 > selection, and post-install boot are not yet qualified. Source success is not
 > permission to write a physical device.
 
-## Recommended fork workflow
+## Recommended World Playbook workflow
 
-Fork this repository and manage your collection and local profiles in the fork.
-Send reusable public media metadata to the Catalog repository.
+Use the World Playbook template. Do not fork this Installer or the Catalog for
+ordinary use.
 
 ```sh
-git clone https://github.com/<your-account>/gujo-homelab-os-installer.git
+gh repo create <your-account>/<your-playbook> \
+  --private \
+  --template dalsoop/gujo-homelab-world-playbook \
+  --clone
+cd <your-playbook>
+```
+
+The external World consumer is not implemented yet. Until it is, the commands
+below operate on the reference composition inside this Installer checkout and
+must not be presented as proof that a World Playbook was consumed.
+
+```sh
+git clone https://github.com/dalsoop/gujo-homelab-os-installer.git
 cd gujo-homelab-os-installer
 
 ./device-os available
@@ -87,7 +100,7 @@ against their SHA-256 before issuing a final fit result. Missing public files us
 a header/one-byte HTTPS estimate; `--offline` disables probes, and estimates
 remain pending until the artifacts are locally verified.
 
-## Customize the USB
+## Current reference composition
 
 ```sh
 ./device-os include pop-os
@@ -95,35 +108,36 @@ remain pending until the artifacts are locally verified.
 ./device-os plan
 ```
 
-These commands update `collections/device-os.json`. Put private,
-organization-specific, or hardware-specific entries under
-`usb-media/local-entries/` and register them in
-`usb-media/composition.json`.
+These commands currently update `collections/device-os.json` inside the
+Installer checkout. This is a temporary reference surface pending the external
+World Playbook consumer. User-owned selection, private profiles, hardware
+bindings, and append-only USB generations belong in the World Playbook.
 
-To use another Catalog fork, change both its repository URL and exact
-40-character commit. Branches and `latest` are intentionally rejected.
+Catalog contributors may test another Catalog repository by changing both its
+URL and exact 40-character commit. Branches and `latest` are intentionally
+rejected.
 
 ## Repository split
 
 ```text
 gujo-homelab-os-catalog
   public bootloader and OS JSON, official URLs, SHA-256
-                         |
-                         | exact pinned commit
-                         v
-gujo-homelab-os-installer fork
-  collection, local profiles, support bundles, media pipeline
-                         |
-                         v
-                  Gujo Homelab OS USB
+                 |
+                 | exact pinned commit
+                 v
+gujo-homelab-os-installer <--- gujo-homelab-world-playbook
+  media pipeline and safety       user intent and USB generations
+                 |
+                 v
+          Gujo Homelab OS USB
 ```
 
 | Path | Responsibility |
 | --- | --- |
 | `device-os` | Human-facing selection, capacity, plan, simulation, preparation, and Linux/macOS write entry points |
-| `usb-media/composition.json` | Catalog pin, USB properties, local profiles, bundles |
-| `collections/device-os.json` | Selected public entries and menu groups |
-| `usb-media/local-entries/` | Fork-local runtime artifacts and profiles |
+| `usb-media/composition.json` | Current reference Catalog pin, USB properties, local profiles, bundles |
+| `collections/device-os.json` | Current reference selection pending World input support |
+| `usb-media/local-entries/` | Installer-owned reference runtime artifacts and profiles |
 | `installer/` | Default DNS profile's offline image and destructive gate |
 | `management/` | DNS cluster, Tailscale, desired state, backup, recovery, status |
 
@@ -134,6 +148,7 @@ tests; this is not a dynamic plug-in loader.
 ## Documentation
 
 - [Architecture](docs/architecture.md)
+- [World Playbook contract](docs/world-playbook.md)
 - [Business rules](docs/business-rules.md)
 - [Security](docs/security.md)
 - [Engineering standards](docs/standards.md)
