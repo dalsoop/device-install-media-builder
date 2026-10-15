@@ -2,10 +2,10 @@
 set -eu
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
-catalog=${1:-${HOMELAB_MEDIA_CATALOG:-$script_dir/catalog.json}}
+catalog=${1:-${USB_MEDIA_CATALOG:-$script_dir/catalog.json}}
 
 fail() {
-    echo "homelab-usb verify-catalog: $*" >&2
+    echo "usb-media verify-catalog: $*" >&2
     exit 1
 }
 
@@ -80,4 +80,4 @@ jq -e '
   (all(.entries[]; if .profile_adapter == "dns-appliance" then .source.kind == "runtime-artifact" else true end))
 ' "$catalog" >/dev/null || fail "catalog contract is invalid"
 
-echo "homelab-usb media catalog: valid"
+echo "usb-media catalog: valid"

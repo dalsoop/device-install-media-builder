@@ -3,9 +3,9 @@ set -eu
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
-catalog=$repo_root/homelab-usb/catalog.json
-verify=$repo_root/homelab-usb/verify-catalog
-render=$repo_root/homelab-usb/render-ventoy-config
+catalog=$repo_root/usb-media/catalog.json
+verify=$repo_root/usb-media/verify-catalog
+render=$repo_root/usb-media/render-ventoy-config
 temporary=$(mktemp -d)
 trap 'rm -rf "$temporary"' EXIT HUP INT TERM
 

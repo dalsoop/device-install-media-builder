@@ -1,6 +1,6 @@
-# Homelab Bootstrap Media
+# Homelab Provisioning
 
-[![CI](https://github.com/dalsoop/homelab-bootstrap-media/actions/workflows/ci.yml/badge.svg)](https://github.com/dalsoop/homelab-bootstrap-media/actions/workflows/ci.yml)
+[![CI](https://github.com/dalsoop/homelab-provisioning/actions/workflows/ci.yml/badge.svg)](https://github.com/dalsoop/homelab-provisioning/actions/workflows/ci.yml)
 
 홈랩 장비의 설치·복구·검증을 한 USB에서 수행하기 위한 재현 가능한 소스다.
 체크섬이 고정된 범용 설치 이미지와, HP 장비를 정확히 식별한 뒤에만 동작하는
@@ -28,7 +28,7 @@ Ventoy 메뉴는 한국어가 기본이며 `L` 키로 언어를 바꿀 수 있�
 
 ## 확장 가능한 구조
 
-[`homelab-usb/catalog.json`](homelab-usb/catalog.json)이 USB 구성의 단일 원장이다.
+[`usb-media/catalog.json`](usb-media/catalog.json)이 USB 구성의 단일 원장이다.
 각 항목은 같은 `entry` 계약을 따르되 `source.kind`에 따라 다른 전략을 사용한다.
 
 ```text
@@ -46,7 +46,7 @@ bundle
 `profile_adapter`로 격리하므로 DNS의 하드웨어 게이트가 다른 설치기에 전파되지
 않고, 범용 설치기의 느슨한 정책도 DNS 프로필을 약화시키지 않는다.
 
-자세한 확장 계약은 [USB 문서](homelab-usb/README.md)와
+자세한 확장 계약은 [USB 문서](usb-media/README.md)와
 [결정 기록](docs/decisions/0002-polymorphic-media-catalog.md)에 있다.
 
 ## 빠른 시작
@@ -54,15 +54,15 @@ bundle
 Linux 빌더에서 고정된 외부 이미지를 내려받아 검증한다.
 
 ```sh
-homelab-usb/verify-catalog
-homelab-usb/fetch-images
+usb-media/verify-catalog
+usb-media/fetch-images
 ```
 
 DNS ISO를 별도로 빌드한 뒤, 제거 가능한 USB의 장치 경로와 시리얼을 다시
 확인하고 기록한다.
 
 ```sh
-sudo homelab-usb/write-usb-linux \
+sudo usb-media/write-usb-linux \
   --device /dev/sdX \
   --runtime-artifact dns-appliance=/absolute/path/dns-appliance.iso \
   --runtime-manifest dns-appliance=/absolute/path/build-manifest.json \
@@ -90,7 +90,7 @@ NIC MAC, 내부 디스크가 로컬 인벤토리와 모두 일치하지 않으�
 
 | 경로 | 책임 |
 | --- | --- |
-| `homelab-usb/` | 미디어 카탈로그, 다운로드, 검증, USB 조립 |
+| `usb-media/` | 설치·복구 USB 카탈로그, 다운로드, 검증, 조립 |
 | `installer/` | 오프라인 DNS ISO와 파괴 방지 설치 게이트 |
 | `inventory/` | 공개 예제 인벤토리; 실제 장비 값은 무시된 로컬 경로 사용 |
 | `management/` | 클러스터 초기화, Tailscale 등록, 백업, 상태판 |

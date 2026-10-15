@@ -1,4 +1,4 @@
-# Homelab Bootstrap USB
+# Homelab Install & Recovery USB
 
 Ventoy 기반의 한국어 우선 멀티부트 USB다. 설치 이미지 목록, 다운로드 위치,
 체크섬, 메뉴, USB 대상 경로와 실행 정책은 모두 [`catalog.json`](catalog.json)에
@@ -77,14 +77,14 @@ Ventoy 기반의 한국어 우선 멀티부트 USB다. 설치 이미지 목록, 
 Linux에서 카탈로그와 외부 소스를 검증한다.
 
 ```sh
-homelab-usb/verify-catalog
-homelab-usb/fetch-images
+usb-media/verify-catalog
+usb-media/fetch-images
 ```
 
 DNS ISO와 빌드 매니페스트를 런타임 항목으로 주입한다.
 
 ```sh
-sudo homelab-usb/write-usb-linux \
+sudo usb-media/write-usb-linux \
   --device /dev/sdX \
   --runtime-artifact dns-appliance=/absolute/path/dns-appliance.iso \
   --runtime-manifest dns-appliance=/absolute/path/build-manifest.json \
@@ -100,7 +100,7 @@ sudo homelab-usb/write-usb-linux \
 ## USB 결과 구조
 
 ```text
-HOMELAB-USB/
+INSTALL-RECOVER/
 ├── images/                  카탈로그가 배치한 부팅 ISO
 ├── guides/POP_OS_KO.md
 ├── tools/dns-appliance-status-monitor/

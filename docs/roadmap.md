@@ -56,13 +56,13 @@ physical operation; release remains blocked by `docs/verification.md`.
 - [ ] Complete cluster, backup/restore, primary-loss, and DHCP rollback drills.
 - [ ] Publish a tagged installer only after the physical gates pass.
 
-## Phase 6: Homelab Bootstrap USB
+## Phase 6: Homelab Install & Recovery USB
 
 - [x] Define a polymorphic media catalog for pinned downloads, runtime
   artifacts, repository bundles, menu metadata, and isolated profile adapters.
 - [x] Pin Ventoy, Debian Live, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE,
   and Pop!_OS downloads and checksums in that catalog.
-- [x] Add a serial-bound Linux writer that creates `HOMELAB-USB` and a separate
+- [x] Add a serial-bound Linux writer that creates `INSTALL-RECOVER` and a separate
   `DNS-ENROLL` partition.
 - [x] Add Korean-first Ventoy aliases, a Korean Pop!_OS guide, and a portable
   three-node DNS appliance status monitor.

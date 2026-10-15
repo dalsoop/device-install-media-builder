@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://github.com/dalsoop/homelab-bootstrap-media/schemas/enrollment-record.schema.json",
+  "$id": "https://github.com/dalsoop/homelab-provisioning/schemas/enrollment-record.schema.json",
   "title": "DNS appliance public enrollment record",
   "type": "object",
   "additionalProperties": false,
