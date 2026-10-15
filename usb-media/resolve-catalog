@@ -92,7 +92,9 @@ else
 fi
 
 index=$catalog_root/$index_path
-[ -f "$index" ] && [ ! -L "$index" ] || fail "고정 카탈로그 인덱스를 읽을 수 없습니다"
+if [ ! -f "$index" ] || [ -L "$index" ]; then
+    fail "고정 카탈로그 인덱스를 읽을 수 없습니다"
+fi
 jq -e '
   def safe_id: type == "string" and test("^[a-z0-9][a-z0-9-]*$");
   def safe_rel:
@@ -118,7 +120,9 @@ bootloader_path=$(jq -er --arg id "$bootloader_id" '.bootloaders[] | select(.id 
     fail "부트로더를 카탈로그에서 찾지 못했습니다: $bootloader_id"
 case "$bootloader_path" in catalog/bootloaders/*.json) ;; *) fail "부트로더 경로가 안전하지 않습니다" ;; esac
 bootloader=$catalog_root/$bootloader_path
-[ -f "$bootloader" ] && [ ! -L "$bootloader" ] || fail "부트로더 파일을 읽을 수 없습니다"
+if [ ! -f "$bootloader" ] || [ -L "$bootloader" ]; then
+    fail "부트로더 파일을 읽을 수 없습니다"
+fi
 
 counter=0
 jq -r '.entries[]' "$collection" > "$temporary/selected-entries"
@@ -128,7 +132,9 @@ while IFS= read -r id; do
         fail "선택한 항목을 카탈로그에서 찾지 못했습니다: $id"
     case "$entry_path" in catalog/entries/*.json) ;; *) fail "항목 경로가 안전하지 않습니다: $id" ;; esac
     entry=$catalog_root/$entry_path
-    [ -f "$entry" ] && [ ! -L "$entry" ] || fail "항목 파일을 읽을 수 없습니다: $id"
+    if [ ! -f "$entry" ] || [ -L "$entry" ]; then
+        fail "항목 파일을 읽을 수 없습니다: $id"
+    fi
     actual_id=$(jq -er '.id' "$entry")
     [ "$actual_id" = "$id" ] || fail "인덱스 ID와 항목 ID가 다릅니다: $id"
     counter=$((counter + 1))
@@ -139,7 +145,9 @@ jq -r '.local_entries[]' "$composition" > "$temporary/local-entries"
 while IFS= read -r local_path; do
     [ -n "$local_path" ] || continue
     local_entry=$repo_root/$local_path
-    [ -f "$local_entry" ] && [ ! -L "$local_entry" ] || fail "로컬 항목을 읽을 수 없습니다: $local_path"
+    if [ ! -f "$local_entry" ] || [ -L "$local_entry" ]; then
+        fail "로컬 항목을 읽을 수 없습니다: $local_path"
+    fi
     id=$(jq -er '.id' "$local_entry")
     case "$id" in
         ''|*[!a-z0-9-]*|-[a-z0-9-]*|*[!a-z0-9]) fail "로컬 항목 ID가 안전하지 않습니다: $id" ;;
