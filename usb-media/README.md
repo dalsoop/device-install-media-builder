@@ -100,7 +100,7 @@ sudo usb-media/write-usb-linux \
 ## USB 결과 구조
 
 ```text
-HOMELAB-USB/
+INSTALL-RECOVER/
 ├── images/                  카탈로그가 배치한 부팅 ISO
 ├── guides/POP_OS_KO.md
 ├── tools/dns-appliance-status-monitor/

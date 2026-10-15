@@ -5,7 +5,7 @@
     "repository": "https://github.com/dalsoop/homelab-provisioning"
   },
   "usb": {
-    "data_label": "HOMELAB-USB",
+    "data_label": "INSTALL-RECOVER",
     "enrollment_label": "DNS-ENROLL",
     "enrollment_reserve_mib": 2048,
     "capacity_overhead_mib": 768,

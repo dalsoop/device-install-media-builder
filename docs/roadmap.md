@@ -62,7 +62,7 @@ physical operation; release remains blocked by `docs/verification.md`.
   artifacts, repository bundles, menu metadata, and isolated profile adapters.
 - [x] Pin Ventoy, Debian Live, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE,
   and Pop!_OS downloads and checksums in that catalog.
-- [x] Add a serial-bound Linux writer that creates `HOMELAB-USB` and a separate
+- [x] Add a serial-bound Linux writer that creates `INSTALL-RECOVER` and a separate
   `DNS-ENROLL` partition.
 - [x] Add Korean-first Ventoy aliases, a Korean Pop!_OS guide, and a portable
   three-node DNS appliance status monitor.
