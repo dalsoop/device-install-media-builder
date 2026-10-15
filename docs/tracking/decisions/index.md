@@ -6,4 +6,5 @@
 | 0002 | Accepted | Resolve media through a pinned declarative Catalog |
 | 0003 | Accepted | Keep destructive actions behind target-specific gates |
 | 0004 | Accepted | Adopt Gujo Homelab OS repository names |
+| 0006 | Accepted | Use verified USB creation as the World generation axis |
 
