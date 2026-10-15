@@ -5,7 +5,7 @@ script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
 # shellcheck disable=SC1091
 . "$script_dir/locks.env"
-cache_dir=${SUPERUSB_CACHE_DIR:-$repo_root/cache/superusb}
+cache_dir=${HOMELAB_USB_CACHE_DIR:-$repo_root/cache/homelab-usb}
 reserve_mib=2048
 device=
 dns_iso=
@@ -28,12 +28,15 @@ while [ "$#" -gt 0 ]; do
 done
 
 fail() {
-    echo "superusb write-usb-linux: $*" >&2
+    echo "homelab-usb write-usb-linux: $*" >&2
     exit 1
 }
 
 [ "$(uname -s)" = Linux ] || fail "Linux is required"
 [ "$(id -u)" -eq 0 ] || fail "run as root"
+for command in lsblk findmnt jq sha256sum python3 sfdisk blockdev udevadm mkfs.exfat; do
+    command -v "$command" >/dev/null 2>&1 || fail "$command is required"
+done
 [ -b "$device" ] || usage
 [ "$(lsblk -dnro TYPE "$device")" = disk ] || fail "whole-disk target required"
 [ "$(lsblk -dnro RM "$device")" = 1 ] || fail "target is not reported removable"
@@ -55,14 +58,18 @@ declare -a locked_files=(
     "$cache_dir/debian-live-$DEBIAN_LIVE_VERSION-amd64-standard.iso"
     "$cache_dir/proxmox-ve_$PROXMOX_VE_VERSION.iso"
     "$cache_dir/TrueNAS-SCALE-$TRUENAS_VERSION.iso"
+    "$cache_dir/proxmox-backup-server_$PROXMOX_BACKUP_SERVER_VERSION.iso"
+    "$cache_dir/pop-os_${POP_OS_VERSION}_amd64_generic_${POP_OS_BUILD}.iso"
 )
 for file in "${locked_files[@]}"; do
-    [ -s "$file" ] || fail "missing $file; run superusb/fetch-images"
+    [ -s "$file" ] || fail "missing $file; run homelab-usb/fetch-images"
 done
 printf '%s  %s\n' "$VENTOY_LINUX_SHA256" "${locked_files[0]}" | sha256sum -c - >/dev/null
 printf '%s  %s\n' "$DEBIAN_LIVE_SHA256" "${locked_files[1]}" | sha256sum -c - >/dev/null
 printf '%s  %s\n' "$PROXMOX_VE_SHA256" "${locked_files[2]}" | sha256sum -c - >/dev/null
 printf '%s  %s\n' "$TRUENAS_SHA256" "${locked_files[3]}" | sha256sum -c - >/dev/null
+printf '%s  %s\n' "$PROXMOX_BACKUP_SERVER_SHA256" "${locked_files[4]}" | sha256sum -c - >/dev/null
+printf '%s  %s\n' "$POP_OS_SHA256" "${locked_files[5]}" | sha256sum -c - >/dev/null
 
 expected_dns_sha=$(jq -er '.iso_sha256 | select(test("^[a-f0-9]{64}$"))' "$dns_manifest")
 actual_dns_sha=$(sha256sum "$dns_iso" | awk '{print $1}')
@@ -87,7 +94,7 @@ while read -r partition; do
     [ -n "$partition" ] && umount "$partition" 2>/dev/null || true
 done < <(lsblk -nrpo NAME,TYPE "$device" | awk '$2 == "part" { print $1 }')
 
-temporary=$(mktemp -d /tmp/superusb.XXXXXX)
+temporary=$(mktemp -d /tmp/homelab-usb.XXXXXX)
 mount_dir=$temporary/mount
 enroll_dir=$temporary/enroll
 cleanup() {
@@ -100,11 +107,11 @@ trap cleanup EXIT HUP INT TERM
 tar -xzf "${locked_files[0]}" -C "$temporary"
 ventoy_dir=$temporary/ventoy-$VENTOY_VERSION
 [ -x "$ventoy_dir/Ventoy2Disk.sh" ] || fail "Ventoy archive layout is unexpected"
-printf 'y\ny\n' | "$ventoy_dir/Ventoy2Disk.sh" -I -r "$reserve_mib" -L SUPERUSB "$device"
+printf 'y\ny\n' | "$ventoy_dir/Ventoy2Disk.sh" -I -r "$reserve_mib" -L HOMELAB-USB "$device"
 blockdev --rereadpt "$device" || true
 udevadm settle
 
-main_partition=$(lsblk -nrpo NAME,LABEL "$device" | awk '$2 == "SUPERUSB" { print $1; exit }')
+main_partition=$(lsblk -nrpo NAME,LABEL "$device" | awk '$2 == "HOMELAB-USB" { print $1; exit }')
 [ -b "$main_partition" ] || fail "Ventoy data partition was not found"
 
 sector_size=$(blockdev --getss "$device")
@@ -123,26 +130,74 @@ mkfs.exfat -n DNS-ENROLL "$enroll_partition"
 mkdir -p "$mount_dir" "$enroll_dir"
 mount "$main_partition" "$mount_dir"
 install -d -m 0755 "$mount_dir/images/01-dns" "$mount_dir/images/02-virtualization" \
-    "$mount_dir/images/03-storage" "$mount_dir/images/90-tools" "$mount_dir/manifests"
+    "$mount_dir/images/03-storage" "$mount_dir/images/04-desktop" \
+    "$mount_dir/images/90-tools" "$mount_dir/manifests" "$mount_dir/ventoy" \
+    "$mount_dir/guides" "$mount_dir/tools/dns-appliance-status-monitor"
 install -m 0644 "$dns_iso" "$mount_dir/images/01-dns/dns-appliance-installer.iso"
 install -m 0644 "${locked_files[2]}" "$mount_dir/images/02-virtualization/proxmox-ve-$PROXMOX_VE_VERSION.iso"
+install -m 0644 "${locked_files[4]}" "$mount_dir/images/02-virtualization/proxmox-backup-server-$PROXMOX_BACKUP_SERVER_VERSION.iso"
 install -m 0644 "${locked_files[3]}" "$mount_dir/images/03-storage/truenas-$TRUENAS_VERSION.iso"
+install -m 0644 "${locked_files[5]}" "$mount_dir/images/04-desktop/pop-os-$POP_OS_VERSION-generic-build-$POP_OS_BUILD.iso"
 install -m 0644 "${locked_files[1]}" "$mount_dir/images/90-tools/debian-live-$DEBIAN_LIVE_VERSION.iso"
 install -m 0644 "$dns_manifest" "$mount_dir/manifests/dns-build-manifest.json"
+install -m 0644 "$script_dir/guides/pop-os-ko.md" "$mount_dir/guides/POP_OS_KO.md"
+install -m 0644 "$repo_root/management/dns-appliance-status-monitor/config.json" \
+    "$repo_root/management/dns-appliance-status-monitor/server.py" \
+    "$repo_root/management/dns-appliance-status-monitor/README.md" \
+    "$mount_dir/tools/dns-appliance-status-monitor/"
+install -m 0755 "$repo_root/management/dns-appliance-status-monitor/start" \
+    "$mount_dir/tools/dns-appliance-status-monitor/start"
 (
     cd "$mount_dir"
     find images -type f -name '*.iso' -exec sha256sum {} + | LC_ALL=C sort > manifests/SHA256SUMS
 )
-cat > "$mount_dir/README.txt" <<EOF
-SUPERUSB $VENTOY_VERSION
+cat > "$mount_dir/ventoy/ventoy.json" <<EOF
+{
+  "control": [
+    { "VTOY_MENU_LANGUAGE": "ko_KR" },
+    { "VTOY_HELP_TXT_LANGUAGE": "ko_KR" },
+    { "VTOY_DEFAULT_MENU_MODE": "1" },
+    { "VTOY_TREE_VIEW_MENU_STYLE": "1" },
+    { "VTOY_DEFAULT_SEARCH_ROOT": "/images" },
+    { "VTOY_FILT_DOT_UNDERSCORE_FILE": "1" }
+  ],
+  "menu_alias": [
+    { "dir": "/images/01-dns", "alias": "01 DNS 서버" },
+    { "dir": "/images/02-virtualization", "alias": "02 가상화 및 백업" },
+    { "dir": "/images/03-storage", "alias": "03 스토리지" },
+    { "dir": "/images/04-desktop", "alias": "04 데스크톱" },
+    { "dir": "/images/90-tools", "alias": "90 점검 및 복구" },
+    { "image": "/images/01-dns/dns-appliance-installer.iso", "alias": "DNS 서버 자동 설치 (HP 전용, 디스크 삭제 주의)" },
+    { "image": "/images/02-virtualization/proxmox-ve-$PROXMOX_VE_VERSION.iso", "alias": "Proxmox VE $PROXMOX_VE_VERSION 대화형 설치" },
+    { "image": "/images/02-virtualization/proxmox-backup-server-$PROXMOX_BACKUP_SERVER_VERSION.iso", "alias": "Proxmox Backup Server $PROXMOX_BACKUP_SERVER_VERSION 대화형 설치" },
+    { "image": "/images/03-storage/truenas-$TRUENAS_VERSION.iso", "alias": "TrueNAS SCALE $TRUENAS_VERSION 대화형 설치" },
+    { "image": "/images/04-desktop/pop-os-$POP_OS_VERSION-generic-build-$POP_OS_BUILD.iso", "alias": "Pop!_OS $POP_OS_VERSION 한국어 설치" },
+    { "image": "/images/90-tools/debian-live-$DEBIAN_LIVE_VERSION.iso", "alias": "Debian Live $DEBIAN_LIVE_VERSION 장비 점검" }
+  ]
+}
+EOF
+python3 -c 'import json,sys; json.load(open(sys.argv[1], encoding="utf-8"))' \
+    "$mount_dir/ventoy/ventoy.json"
+cat > "$mount_dir/README_KO.txt" <<EOF
+HOMELAB BOOTSTRAP USB / 홈랩 부트스트랩 USB
 
-01-dns: guarded DNS appliance installer; exact HP inventory match required.
-02-virtualization: Proxmox VE $PROXMOX_VE_VERSION; interactive and destructive.
-03-storage: TrueNAS $TRUENAS_VERSION; interactive and destructive.
-90-tools: Debian Live $DEBIAN_LIVE_VERSION for inventory and recovery.
+01 DNS 서버: HP 인벤토리가 정확히 일치해야만 삭제가 허용되는 자동 설치기.
+02 가상화 및 백업: Proxmox VE와 Proxmox Backup Server 대화형 설치기.
+03 스토리지: TrueNAS SCALE 대화형 설치기.
+04 데스크톱: Pop!_OS 설치기. guides/POP_OS_KO.md를 먼저 읽을 것.
+90 점검 및 복구: Debian Live.
+tools/dns-appliance-status-monitor/start: 세 DNS 장비 상태판 실행.
 
-No installer has an automatic menu timeout. Verify the destination disk inside
-each installer. DNS enrollment results are written only to DNS-ENROLL.
+자동 선택 타이머는 없다. 각 설치기 안에서 대상 디스크를 다시 확인해야 한다.
+DNS 등록 결과는 DNS-ENROLL 파티션에만 기록된다. Ventoy 언어는 L 키로 바꾼다.
+EOF
+cat > "$mount_dir/README_EN.txt" <<EOF
+HOMELAB BOOTSTRAP USB
+
+The menu defaults to Korean; press L in Ventoy to select another language.
+No installer has an automatic menu timeout. Proxmox, PBS, TrueNAS, and Pop!_OS
+remain interactive. Verify the destination disk inside every installer. DNS
+enrollment results are written only to DNS-ENROLL.
 EOF
 sync -f "$mount_dir"
 umount "$mount_dir"
@@ -154,5 +209,5 @@ jq '{schema_version:1,build_id:.build_id,image_sha256:.iso_sha256,debian_point_r
 sync -f "$enroll_dir"
 umount "$enroll_dir"
 
-echo "superusb write-usb-linux: verified sources and created SUPERUSB plus DNS-ENROLL"
-echo "superusb write-usb-linux: target remains $device; eject it before unplugging"
+echo "homelab-usb write-usb-linux: verified sources and created HOMELAB-USB plus DNS-ENROLL"
+echo "homelab-usb write-usb-linux: target remains $device; eject it before unplugging"

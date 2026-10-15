@@ -52,13 +52,17 @@ Tailscale SSH by default. Normal OpenSSH remains the recovery surface.
 
 ### Utility media plane
 
-`superusb/` builds a Ventoy menu containing the guarded DNS appliance ISO,
-Proxmox VE, TrueNAS, and Debian Live. Upstream images are version- and
-SHA-256-pinned; generated images and ISOs remain outside Git. A distinct
-`DNS-ENROLL` partition preserves the DNS first-boot contract.
+`homelab-usb/` builds a Korean-first Ventoy menu containing the guarded DNS
+appliance ISO, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE, Pop!_OS, and
+Debian Live. Upstream images are version- and SHA-256-pinned; generated images
+and ISOs remain outside Git. A distinct `DNS-ENROLL` partition preserves the
+DNS first-boot contract. A dependency-free, read-only status page can run from
+the USB on Pop!_OS or another Python 3 Linux environment to probe all three DNS
+nodes without installing software on them.
 
-Proxmox and TrueNAS always remain interactive. Their inclusion on the same USB
-does not authorize unattended erasure or reuse the DNS hardware inventory.
+Proxmox VE, Proxmox Backup Server, TrueNAS, and Pop!_OS always remain
+interactive. Their inclusion on the same USB does not authorize unattended
+erasure or reuse the DNS hardware inventory.
 
 ## Installation completion contract
 

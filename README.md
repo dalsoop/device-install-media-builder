@@ -1,7 +1,9 @@
-# DNS Appliance Provisioning
+# Homelab Bootstrap Media
 
-Offline Debian provisioning and encrypted USB enrollment for three bare-metal
-Technitium DNS appliances.
+Guarded, reproducible homelab installation media. It combines offline Debian
+provisioning and encrypted enrollment for three bare-metal Technitium DNS
+appliances with a checksum-pinned multiboot USB for virtualization, backup,
+storage, desktop, diagnosis, and post-install verification.
 
 ## Planned topology
 
@@ -24,8 +26,10 @@ Debian 13.7 Simple-CDD profile, exact-hardware erase gates, a digest-pinned
 Technitium 15.6.1 OCI image, retry-safe first boot, generated Cockpit and
 Technitium credentials, encrypted `DNS-ENROLL` writeback, health and backup
 timers, cluster bootstrap, one-off Tailscale enrollment, and Git-gated zone
-plan/apply tooling. `superusb/` defines a separate Ventoy utility USB containing
-the DNS installer, Proxmox, TrueNAS, and Debian Live with pinned checksums.
+plan/apply tooling. `homelab-usb/` defines the Homelab Bootstrap USB containing
+the DNS installer, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE, Pop!_OS,
+and Debian Live with pinned checksums, a Korean-first menu, and a portable DNS
+appliance status monitor.
 
 It deliberately contains no generated ISO, real HP inventory, password, token,
 private key, or recovery archive. Destructive installation remains disabled
@@ -53,5 +57,5 @@ completed.
 
 Start with [the architecture](docs/architecture.md), [security rules](docs/security.md),
 [the OS installer guide](docs/os-install.md), [network cutover](docs/network-cutover.md),
-[recovery](docs/recovery.md), [SUPERUSB](superusb/README.md), and
+[recovery](docs/recovery.md), [Homelab Bootstrap USB](homelab-usb/README.md), and
 [verification gates](docs/verification.md).

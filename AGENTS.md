@@ -1,7 +1,8 @@
-# DNS Appliance Provisioning
+# Homelab Bootstrap Media
 
-This repository owns the reproducible, offline bootstrap of the three bare-metal
-DNS appliances `dns01`, `dns02`, and `dns03`.
+This repository owns guarded homelab installation media and the reproducible,
+offline bootstrap of the three bare-metal DNS appliances `dns01`, `dns02`, and
+`dns03`.
 
 ## Safety invariants
 
@@ -23,7 +24,8 @@ DNS appliances `dns01`, `dns02`, and `dns03`.
 
 ## Repository boundaries
 
-- Day-0 media, first boot, and USB enrollment live here.
+- Day-0 installation media, first boot, USB enrollment, and portable read-only
+  verification tools live here.
 - Ongoing host configuration belongs in `gujoai/infra/host-infra`.
 - Long-lived encrypted secrets belong in the existing principal secrets store.
 - The MCP gateway runs on a management host, never on the DNS appliances.

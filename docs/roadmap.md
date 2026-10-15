@@ -56,11 +56,14 @@ physical operation; release remains blocked by `docs/verification.md`.
 - [ ] Complete cluster, backup/restore, primary-loss, and DHCP rollback drills.
 - [ ] Publish a tagged installer only after the physical gates pass.
 
-## Phase 6: SUPERUSB utility media
+## Phase 6: Homelab Bootstrap USB
 
-- [x] Pin Ventoy, Debian Live, Proxmox VE, and TrueNAS downloads and checksums.
-- [x] Add a serial-bound Linux writer that creates `SUPERUSB` and a separate
+- [x] Pin Ventoy, Debian Live, Proxmox VE, Proxmox Backup Server, TrueNAS SCALE,
+  and Pop!_OS downloads and checksums.
+- [x] Add a serial-bound Linux writer that creates `HOMELAB-USB` and a separate
   `DNS-ENROLL` partition.
+- [x] Add Korean-first Ventoy aliases, a Korean Pop!_OS guide, and a portable
+  three-node DNS appliance status monitor.
 - [ ] Build the DNS ISO, assemble the physical utility USB, and verify all
   copied checksums.
 - [ ] Test the exact HP legacy BIOS, UEFI, Secure Boot, mapper-device exclusion,

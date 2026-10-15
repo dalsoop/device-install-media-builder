@@ -23,6 +23,10 @@ Implemented bootstrap and operating surfaces:
   one-off key for each selected node, sends the key over existing LAN SSH,
   deletes it, and verifies hostname, `tag:dns-appliance`, address, and peer
   reachability. It never sends the OAuth secret to an appliance.
+- `dns-appliance-status-monitor/start` launches a dependency-free Korean status
+  page on `127.0.0.1:8080` and checks DNS over UDP/TCP plus Cockpit,
+  Technitium, and node-exporter connectivity for all three nodes. It is
+  read-only and is also copied onto the Homelab Bootstrap USB.
 
 Before enrollment, merge the relevant parts of
 `tailscale-policy.example.hujson` into the reviewed tailnet policy and create an

@@ -6,16 +6,18 @@ script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 . "$script_dir/locks.env"
 
 fail() {
-    echo "superusb verify-locks: $*" >&2
+    echo "homelab-usb verify-locks: $*" >&2
     exit 1
 }
 
-for version in "$VENTOY_VERSION" "$DEBIAN_LIVE_VERSION" "$PROXMOX_VE_VERSION" "$TRUENAS_VERSION"; do
+for version in "$VENTOY_VERSION" "$DEBIAN_LIVE_VERSION" "$PROXMOX_VE_VERSION" \
+    "$TRUENAS_VERSION" "$PROXMOX_BACKUP_SERVER_VERSION" "$POP_OS_VERSION"; do
     printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+([.-][0-9]+)*$' ||
         fail "invalid version $version"
 done
 for digest in "$VENTOY_LINUX_SHA256" "$DEBIAN_LIVE_SHA256" \
-    "$PROXMOX_VE_SHA256" "$TRUENAS_SHA256"; do
+    "$PROXMOX_VE_SHA256" "$TRUENAS_SHA256" \
+    "$PROXMOX_BACKUP_SERVER_SHA256" "$POP_OS_SHA256"; do
     printf '%s' "$digest" | grep -Eq '^[0-9a-f]{64}$' || fail "invalid SHA-256"
 done
 
@@ -35,5 +37,13 @@ case "$TRUENAS_URL" in
     https://download.truenas.com/TrueNAS-SCALE-Goldeye/"$TRUENAS_VERSION"/TrueNAS-SCALE-"$TRUENAS_VERSION".iso) ;;
     *) fail "TrueNAS URL is not version pinned" ;;
 esac
+case "$PROXMOX_BACKUP_SERVER_URL" in
+    https://enterprise.proxmox.com/iso/proxmox-backup-server_"$PROXMOX_BACKUP_SERVER_VERSION".iso) ;;
+    *) fail "Proxmox Backup Server URL is not version pinned" ;;
+esac
+case "$POP_OS_URL" in
+    https://iso.pop-os.org/"$POP_OS_VERSION"/amd64/generic/"$POP_OS_BUILD"/pop-os_"$POP_OS_VERSION"_amd64_generic_"$POP_OS_BUILD".iso) ;;
+    *) fail "Pop!_OS URL is not build pinned" ;;
+esac
 
-echo "superusb source locks: valid"
+echo "homelab-usb source locks: valid"
