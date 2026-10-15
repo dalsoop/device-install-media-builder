@@ -68,7 +68,7 @@ Build on an amd64 Debian 13 machine with `simple-cdd` installed:
 
 ```sh
 sudo apt-get install simple-cdd debian-cd debian-archive-keyring \
-  reprepro rsync xorriso isolinux syslinux-common skopeo jq
+  reprepro rsync xorriso isolinux syslinux-common skopeo jq curl
 installer/fetch-locked-sources
 installer/build-image
 ```
@@ -80,7 +80,8 @@ and remains ignored by Git.
 
 The source lock currently selects Debian 13.7, the `20261011T000000Z` Debian
 snapshot, Simple-CDD 0.6.9, and the Technitium 15.6.1 linux/amd64 manifest
-digest. Build evidence is emitted under ignored `artifacts/`.
+digest, plus Tailscale 1.104.1 for linux/amd64 by SHA-256. Build evidence is
+emitted under ignored `artifacts/`.
 
 ## Create the two-part USB
 
@@ -114,6 +115,7 @@ The resulting host has:
 - root SSH login and SSH password authentication disabled;
 - Cockpit on TCP 9090;
 - digest-pinned Technitium DNS in a Podman systemd service;
+- checksum-pinned Tailscale installed and running but not enrolled;
 - nftables allowing DNS and cluster TLS from the LAN while SSH, Cockpit, and
   metrics are restricted to `management_cidr`;
 - the installation facts in `/etc/dns-appliance/install.env`.

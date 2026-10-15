@@ -53,6 +53,35 @@ install -m 0644 /cdrom/simple-cdd/technitium.oci.tar \
 install -m 0644 /cdrom/simple-cdd/enrollment-record.schema.json \
     /target/usr/share/dns-appliance/enrollment-record.schema.json
 
+# Tailscale is installed from a checksum-pinned upstream static archive so the
+# appliance can be built and installed without package-repository access.
+TAILSCALE_VERSION=$(awk -F= '$1 == "TAILSCALE_VERSION" { print $2 }' \
+    /cdrom/simple-cdd/sources.env)
+[ -n "$TAILSCALE_VERSION" ] || {
+    echo "dns.postinst: Tailscale version is missing from source locks" >&2
+    exit 1
+}
+tailscale_root=tailscale_${TAILSCALE_VERSION}_amd64
+tailscale_stage=/tmp/dns-appliance-tailscale
+rm -rf "$tailscale_stage"
+install -d -m 0755 "$tailscale_stage"
+tar -xzf /cdrom/simple-cdd/tailscale.tgz -C "$tailscale_stage"
+[ -x "$tailscale_stage/$tailscale_root/tailscale" ] || {
+    echo "dns.postinst: pinned Tailscale client is missing" >&2
+    exit 1
+}
+[ -x "$tailscale_stage/$tailscale_root/tailscaled" ] || {
+    echo "dns.postinst: pinned tailscaled is missing" >&2
+    exit 1
+}
+install -m 0755 "$tailscale_stage/$tailscale_root/tailscale" /target/usr/bin/tailscale
+install -m 0755 "$tailscale_stage/$tailscale_root/tailscaled" /target/usr/sbin/tailscaled
+install -m 0644 "$tailscale_stage/$tailscale_root/systemd/tailscaled.service" \
+    /target/lib/systemd/system/tailscaled.service
+install -m 0644 "$tailscale_stage/$tailscale_root/systemd/tailscaled.defaults" \
+    /target/etc/default/tailscaled
+rm -rf "$tailscale_stage"
+
 printf '%s\n' "$ROLE" > /target/etc/hostname
 printf '127.0.0.1 localhost\n127.0.1.1 %s.%s %s\n' "$ROLE" "$DOMAIN" "$ROLE" > /target/etc/hosts
 
@@ -111,4 +140,5 @@ in-target systemctl enable cockpit.socket
 in-target systemctl enable nftables.service
 in-target systemctl enable prometheus-node-exporter.service
 in-target systemctl enable systemd-timesyncd.service
+in-target systemctl enable tailscaled.service
 in-target systemctl enable dns-appliance-firstboot.service

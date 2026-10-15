@@ -27,5 +27,7 @@ jobs:
         run: tests/install-gate-simulation.sh
       - name: Run management safety simulations
         run: tests/management-simulation.sh
+      - name: Run Tailscale enrollment simulation
+        run: tests/tailscale-enrollment-simulation.sh
       - name: Verify repository contracts
         run: tests/repository-contract.sh

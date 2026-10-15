@@ -137,6 +137,7 @@ write_technitium_env "$include_bootstrap_password"
 systemctl mask systemd-resolved.service >/dev/null 2>&1 || true
 systemctl enable --now cockpit.socket nftables.service prometheus-node-exporter.service
 systemctl enable --now systemd-timesyncd.service || true
+systemctl enable --now tailscaled.service
 systemctl enable --now technitium-dns.service
 
 wait_for() {

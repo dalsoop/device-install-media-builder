@@ -18,6 +18,11 @@
   health and encrypted backup jobs. It is never written to USB in plaintext.
 - SSH host private-key escrow is disabled by default. Public fingerprints are
   always recorded; encrypted private-key escrow requires a separate decision.
+- Tailscale OAuth client IDs and secrets never enter Git, the ISO, USB, or a DNS
+  appliance. The management host reads them from root/operator-protected files.
+- Each appliance receives a non-reusable, non-ephemeral, one-hour,
+  pre-authorized key tagged `tag:dns-appliance`. The temporary key file is
+  deleted immediately, and enrollment is never rerun on every boot.
 
 ## Agent access
 
@@ -42,6 +47,9 @@ expire automatically.
 - Technitium API: management sources plus the three fixed node addresses needed
   for cluster traffic; it is not open to the rest of the LAN.
 - Technitium management must use TLS before agent write access is enabled.
+- Tailscale accepts DNS and management ports only on `tailscale0`. Appliances do
+  not accept tailnet DNS settings, advertise routes, act as exit nodes, enable
+  Serve/Funnel, or enable Tailscale SSH.
 - IPv6 exposure follows an explicit policy; an accidental wildcard IPv6 listener
   is treated as a failure.
 - The writable USB partition is mounted `nodev,nosuid,noexec` and never supplies

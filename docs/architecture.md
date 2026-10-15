@@ -20,6 +20,7 @@ Each appliance runs only infrastructure required for DNS and host management:
 - Technitium DNS Server
 - OpenSSH
 - Cockpit
+- Tailscale, installed offline and enrolled later
 - firewall rules
 - a small machine-readable health exporter
 - encrypted backup and enrollment units
@@ -41,6 +42,23 @@ The management plane owns orchestration and agent access:
 - A separately deployed MCP gateway exposes read-only tools by default.
 - A limited apply identity is enabled only for approved changes.
 - Prometheus blackbox DNS probes and node metrics verify all three nodes.
+- An OAuth credential kept on the management host mints one one-off,
+  pre-authorized `tag:dns-appliance` key per node and sends only that key over
+  LAN SSH. The key is removed immediately after enrollment.
+
+Tailscale is a management path, not a routing authority. Appliances use
+`--accept-dns=false`, advertise no subnet or exit-node routes, and do not enable
+Tailscale SSH by default. Normal OpenSSH remains the recovery surface.
+
+### Utility media plane
+
+`superusb/` builds a Ventoy menu containing the guarded DNS appliance ISO,
+Proxmox VE, TrueNAS, and Debian Live. Upstream images are version- and
+SHA-256-pinned; generated images and ISOs remain outside Git. A distinct
+`DNS-ENROLL` partition preserves the DNS first-boot contract.
+
+Proxmox and TrueNAS always remain interactive. Their inclusion on the same USB
+does not authorize unattended erasure or reuse the DNS hardware inventory.
 
 ## Installation completion contract
 

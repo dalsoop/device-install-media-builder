@@ -19,6 +19,25 @@ Implemented bootstrap and operating surfaces:
   explicit role confirmation.
 - `network-preflight` verifies that the configured router prefix contains all
   three DNS addresses and reports current reachability.
+- `tailscale-enroll` uses a management-host OAuth credential to mint a distinct
+  one-off key for each selected node, sends the key over existing LAN SSH,
+  deletes it, and verifies hostname, `tag:dns-appliance`, address, and peer
+  reachability. It never sends the OAuth secret to an appliance.
+
+Before enrollment, merge the relevant parts of
+`tailscale-policy.example.hujson` into the reviewed tailnet policy and create an
+OAuth client with the `auth_keys` scope restricted to `tag:dns-appliance`.
+Store the ID and secret outside this repository, one line per protected file:
+
+```sh
+TAILSCALE_OAUTH_CLIENT_ID_FILE=/secure/tailscale/client-id \
+TAILSCALE_OAUTH_CLIENT_SECRET_FILE=/secure/tailscale/client-secret \
+  management/tailscale-enroll --all
+```
+
+The nodes must already be reachable at `10.0.5.1` through `10.0.5.3` by the
+operator SSH key. Enrollment requires Internet access to the Tailscale control
+plane but does not change the appliances' local DNS resolver or routing role.
 
 The MCP gateway source or deployment remains intentionally unvendored until its
 dependencies, authentication boundaries, audit behavior, and destructive tool

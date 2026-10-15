@@ -1,0 +1,39 @@
+#!/bin/sh
+set -eu
+
+script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
+# shellcheck disable=SC1091
+. "$script_dir/locks.env"
+
+fail() {
+    echo "superusb verify-locks: $*" >&2
+    exit 1
+}
+
+for version in "$VENTOY_VERSION" "$DEBIAN_LIVE_VERSION" "$PROXMOX_VE_VERSION" "$TRUENAS_VERSION"; do
+    printf '%s' "$version" | grep -Eq '^[0-9]+\.[0-9]+([.-][0-9]+)*$' ||
+        fail "invalid version $version"
+done
+for digest in "$VENTOY_LINUX_SHA256" "$DEBIAN_LIVE_SHA256" \
+    "$PROXMOX_VE_SHA256" "$TRUENAS_SHA256"; do
+    printf '%s' "$digest" | grep -Eq '^[0-9a-f]{64}$' || fail "invalid SHA-256"
+done
+
+case "$VENTOY_LINUX_URL" in
+    https://github.com/ventoy/Ventoy/releases/download/v"$VENTOY_VERSION"/ventoy-"$VENTOY_VERSION"-linux.tar.gz) ;;
+    *) fail "Ventoy URL is not version pinned" ;;
+esac
+case "$DEBIAN_LIVE_URL" in
+    https://cdimage.debian.org/debian-cd/"$DEBIAN_LIVE_VERSION"-live/*) ;;
+    *) fail "Debian Live URL is not point-release pinned" ;;
+esac
+case "$PROXMOX_VE_URL" in
+    https://enterprise.proxmox.com/iso/proxmox-ve_"$PROXMOX_VE_VERSION".iso) ;;
+    *) fail "Proxmox URL is not version pinned" ;;
+esac
+case "$TRUENAS_URL" in
+    https://download.truenas.com/TrueNAS-SCALE-Goldeye/"$TRUENAS_VERSION"/TrueNAS-SCALE-"$TRUENAS_VERSION".iso) ;;
+    *) fail "TrueNAS URL is not version pinned" ;;
+esac
+
+echo "superusb source locks: valid"

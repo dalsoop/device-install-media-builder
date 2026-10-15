@@ -26,5 +26,13 @@ printf '%s' "$TECHNITIUM_INDEX_DIGEST" | grep -Eq '^sha256:[0-9a-f]{64}$' ||
     fail "invalid Technitium index digest"
 printf '%s' "$TECHNITIUM_AMD64_DIGEST" | grep -Eq '^sha256:[0-9a-f]{64}$' ||
     fail "invalid Technitium amd64 digest"
+printf '%s' "$TAILSCALE_VERSION" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' ||
+    fail "invalid Tailscale version"
+case "$TAILSCALE_AMD64_URL" in
+    https://pkgs.tailscale.com/stable/tailscale_"$TAILSCALE_VERSION"_amd64.tgz) ;;
+    *) fail "Tailscale URL is not version pinned" ;;
+esac
+printf '%s' "$TAILSCALE_AMD64_SHA256" | grep -Eq '^[0-9a-f]{64}$' ||
+    fail "invalid Tailscale SHA-256"
 
 echo "source locks: valid"

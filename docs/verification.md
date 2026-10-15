@@ -7,8 +7,11 @@ evidence.
 
 ## Automated source gates
 
-- `tests/install-gate-simulation.sh` passes all 12 cases.
+- `tests/install-gate-simulation.sh` passes all 13 cases, including Ventoy's
+  `/dev/mapper/Ventoy` media path.
 - `tests/management-simulation.sh` passes all 4 cases.
+- `tests/tailscale-enrollment-simulation.sh` passes without printing either
+  OAuth or auth-key material.
 - `tests/repository-contract.sh` passes.
 - ShellCheck reports no errors.
 - GitHub CI passes on the exact commit to be built.
@@ -22,6 +25,7 @@ evidence.
   manifest, and SBOM.
 - Verify the ISO checksum before and after USB writing.
 - Inspect BIOS and UEFI boot files; verify signed Secure Boot components.
+- Verify the embedded Tailscale archive SHA-256 and installed client version.
 
 ## Virtual-machine gates
 
@@ -33,6 +37,8 @@ evidence.
 - Power loss after credential generation, during encrypted output, after final
   record rename, and before local completion converges without changing secrets.
 - Reboot with the USB attached does not start another installation.
+- Boot the DNS ISO from Ventoy and prove its mapper device and physical USB
+  cannot become the selected internal target.
 
 ## Physical dns01 pilot
 
@@ -45,6 +51,21 @@ evidence.
   enrollment.
 - Decrypt recovery on the management machine and prove the Cockpit password.
 - Run one encrypted backup and isolated restore drill.
+- Enroll with a one-off tagged Tailscale key, verify `accept-dns=false`, no
+  routes/exit-node/Serve/Funnel/SSH, management-port ACLs, `tailscale ping`, and
+  keyless reconnection after reboot.
+
+## SUPERUSB gates
+
+- Verify Ventoy, Debian Live, Proxmox, and TrueNAS against committed SHA-256
+  locks before copying.
+- Verify every copied ISO using the USB's generated `manifests/SHA256SUMS`.
+- Test legacy BIOS and UEFI menus; treat Secure Boot as failed until the exact
+  HP firmware and every selected image boot successfully.
+- Prove all menu entries require deliberate selection and that Proxmox and
+  TrueNAS remain interactive.
+- Verify `DNS-ENROLL` survives boots of every menu entry and accepts only the
+  DNS appliance's encrypted enrollment output.
 
 Only after dns01 passes should dns02 and dns03 be enabled one at a time. Cluster
 and router DHCP cutover are separate final gates. Publishing or writing a new
