@@ -3,7 +3,7 @@ set -eu
 
 script_dir=$(CDPATH='' cd -- "$(dirname -- "$0")" && pwd)
 repo_root=$(CDPATH='' cd -- "$script_dir/.." && pwd)
-catalog=$repo_root/work/device-install-media/catalog.json
+catalog=$repo_root/work/device-os/catalog.json
 verify=$repo_root/usb-media/verify-catalog
 render=$repo_root/usb-media/render-ventoy-config
 capacity=$repo_root/usb-media/calculate-capacity

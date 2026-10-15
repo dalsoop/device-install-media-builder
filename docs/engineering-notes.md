@@ -13,8 +13,8 @@ revision.
 
 Symptom: a new public entry is present in the Catalog but absent from the USB.
 
-Cause: Catalog availability and Builder selection are separate. The entry was
-not added to the collection, or the Builder still pins an older Catalog commit.
+Cause: Catalog availability and Installer selection are separate. The entry was
+not added to the collection, or the Installer still pins an older Catalog commit.
 
 Response: update the exact revision, add the stable ID to the collection, then
 resolve and inspect the plan before downloading.

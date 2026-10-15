@@ -2,7 +2,7 @@
 
 ## Command surface
 
-`device-install-media` supports:
+`device-os` supports:
 
 | Command | State change |
 | --- | --- |

@@ -8,7 +8,7 @@ confirmation=
 usage() {
     cat >&2 <<'EOF'
 usage: sudo usb-media/write-image-macos \
-  --image /absolute/path/device-install.raw \
+  --image /absolute/path/device-os.raw \
   --device /dev/diskN \
   --confirm 'ERASE /dev/diskN MEDIA_NAME EXACT_BYTES'
 
@@ -39,7 +39,7 @@ done
 [ -f "$image" ] || fail "raw image not found: $image"
 [[ "$device" =~ ^/dev/disk[0-9]+$ ]] || fail "whole-disk /dev/diskN target required"
 
-info=$(mktemp /tmp/device-install-disk-info.XXXXXX)
+info=$(mktemp /tmp/device-os-disk-info.XXXXXX)
 cleanup() {
     rm -f "$info"
 }

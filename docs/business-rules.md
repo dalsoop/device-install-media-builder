@@ -2,10 +2,10 @@
 
 ## Product model
 
-The Builder is designed to be forked. A fork owns its selected collection,
+The Installer is designed to be forked. A fork owns its selected collection,
 local media profiles, support bundles, USB labels, and pinned Catalog revision.
 Public media metadata is contributed to the Catalog repository rather than
-copied into Builder code.
+copied into Installer code.
 
 The default fork includes Proxmox VE, Proxmox Backup Server, TrueNAS SCALE,
 Pop!_OS, Debian Live, and a local DNS-appliance installer. Inclusion in one USB
@@ -16,8 +16,8 @@ does not grant the same automation level to every entry.
 - Every public artifact is selected by stable entry ID.
 - Every remote artifact uses HTTPS and a lowercase SHA-256.
 - A Catalog branch, tag, or `latest` reference is not a reproducible input; the
-  Builder accepts an exact commit.
-- Public Catalog content is untrusted input until Builder validation succeeds.
+  Installer accepts an exact commit.
+- Public Catalog content is untrusted input until Installer validation succeeds.
 - General OS installers use `interactive-installer`; diagnostic systems use
   `live-environment`.
 - `guarded-unattended` is reserved for a local profile with an independent

@@ -24,12 +24,12 @@ secret store. Agent gateways run on a management host, never on DNS appliances.
   scope with long-lived credentials.
 - Running the agent gateway on every DNS appliance was rejected because DNS
   availability would depend on a larger management runtime and attack surface.
-- Storing recovery material in the Builder was rejected because a public fork
+- Storing recovery material in the Installer was rejected because a public fork
   must remain safe to clone and review without secret-handling authority.
 
 ## Consequences
 
 A complete workflow spans multiple systems, but each trust boundary is explicit.
-The Builder can be public without publishing actual inventory or secrets.
+The Installer can be public without publishing actual inventory or secrets.
 Appliances continue to answer DNS if the management plane is unavailable.
 

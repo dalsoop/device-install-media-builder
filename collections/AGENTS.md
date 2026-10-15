@@ -1,6 +1,6 @@
 # Collection Module
 
-This module records which public Catalog entries a Builder fork includes and
+This module records which public Catalog entries a Installer fork includes and
 how they are grouped on the USB.
 
 - Store stable entry IDs only; do not copy vendor URLs, versions, or checksums
