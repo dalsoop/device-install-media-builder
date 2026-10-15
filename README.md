@@ -14,10 +14,6 @@ The default composition includes Proxmox VE, Proxmox Backup Server, TrueNAS
 SCALE, Pop!_OS, Debian Live, and a guarded offline installer for three HP DNS
 appliances.
 
-> **Fork this Installer repository for normal use.** Your fork owns the OS
-> selection, local profiles, and private hardware policy. Do not fork the
-> Catalog unless you are contributing reusable public OS metadata.
-
 > Current assurance: repository contracts and isolated simulations run in CI.
 > Physical USB behavior, target firmware, Secure Boot, destructive disk
 > selection, and post-install boot are not yet qualified. Source success is not
